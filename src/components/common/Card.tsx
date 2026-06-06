@@ -5,7 +5,6 @@ export const Card = styled.div`
   border: 1px solid #333;
   padding: 2rem;
   width: 100%;
-  max-width: 400px;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;

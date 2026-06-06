@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
 
 export interface VimNavConfig {
-  activeSection: 'mood' | 'energy' | 'submit';
-  setActiveSection: (section: 'mood' | 'energy' | 'submit') => void;
+  activeSection: 'mood' | 'energy' | 'note' | 'submit';
+  setActiveSection: (section: 'mood' | 'energy' | 'note' | 'submit') => void;
   mood: number;
   setMood: (val: number | ((prev: number) => number)) => void;
   energy: number;
@@ -23,6 +23,10 @@ export function useVimNavigation({
     const handleKeyDown = (e: KeyboardEvent) => {
       // Avoid triggering navigation if the user is typing in a text field
       if (document.activeElement?.tagName === 'INPUT' && (document.activeElement as HTMLInputElement).type === 'text') {
+        // If they press Enter while typing, we can let it submit or just unfocus
+        if (e.key === 'Enter') {
+          (document.activeElement as HTMLInputElement).blur();
+        }
         return;
       }
 
@@ -30,10 +34,12 @@ export function useVimNavigation({
         // Vertical movement
         case 'j':
           if (activeSection === 'mood') setActiveSection('energy');
-          else if (activeSection === 'energy') setActiveSection('submit');
+          else if (activeSection === 'energy') setActiveSection('note');
+          else if (activeSection === 'note') setActiveSection('submit');
           break;
         case 'k':
-          if (activeSection === 'submit') setActiveSection('energy');
+          if (activeSection === 'submit') setActiveSection('note');
+          else if (activeSection === 'note') setActiveSection('energy');
           else if (activeSection === 'energy') setActiveSection('mood');
           break;
 
@@ -53,10 +59,14 @@ export function useVimNavigation({
           }
           break;
 
-        // Submit form
+        // Form Submission
         case 'Enter':
           if (activeSection === 'submit') {
             onSubmit();
+          } else if (activeSection === 'note') {
+             // Let them focus the input field
+             const noteInput = document.getElementById('note-input');
+             if (noteInput) noteInput.focus();
           }
           break;
 
