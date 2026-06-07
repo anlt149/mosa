@@ -56,6 +56,43 @@ export function Login() {
   return (
     <Container>
       <Card as="form" onSubmit={handleAuth}>
+        {/* mosa logo */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="56" height="56" aria-label="mosa logo">
+            <rect width="32" height="32" fill="#000"/>
+            {/* Row 1 */}
+            <rect x="2"  y="2"  width="5" height="5" rx="1" fill="#1a1a1a"/>
+            <rect x="8"  y="2"  width="5" height="5" rx="1" fill="#1a1a1a"/>
+            <rect x="14" y="2"  width="5" height="5" rx="1" fill="#1a1a1a"/>
+            <rect x="20" y="2"  width="5" height="5" rx="1" fill="#39d353"/>
+            <rect x="26" y="2"  width="4" height="5" rx="1" fill="#39d353"/>
+            {/* Row 2 */}
+            <rect x="2"  y="8"  width="5" height="5" rx="1" fill="#1a1a1a"/>
+            <rect x="8"  y="8"  width="5" height="5" rx="1" fill="#1a1a1a"/>
+            <rect x="14" y="8"  width="5" height="5" rx="1" fill="#26a641"/>
+            <rect x="20" y="8"  width="5" height="5" rx="1" fill="#26a641"/>
+            <rect x="26" y="8"  width="4" height="5" rx="1" fill="#39d353"/>
+            {/* Row 3 */}
+            <rect x="2"  y="14" width="5" height="5" rx="1" fill="#1a1a1a"/>
+            <rect x="8"  y="14" width="5" height="5" rx="1" fill="#006d32"/>
+            <rect x="14" y="14" width="5" height="5" rx="1" fill="#26a641"/>
+            <rect x="20" y="14" width="5" height="5" rx="1" fill="#26a641"/>
+            <rect x="26" y="14" width="4" height="5" rx="1" fill="#26a641"/>
+            {/* Row 4 */}
+            <rect x="2"  y="20" width="5" height="5" rx="1" fill="#1a1a1a"/>
+            <rect x="8"  y="20" width="5" height="5" rx="1" fill="#006d32"/>
+            <rect x="14" y="20" width="5" height="5" rx="1" fill="#006d32"/>
+            <rect x="20" y="20" width="5" height="5" rx="1" fill="#006d32"/>
+            <rect x="26" y="20" width="4" height="5" rx="1" fill="#1a1a1a"/>
+            {/* Row 5 */}
+            <rect x="2"  y="26" width="5" height="4" rx="1" fill="#1a1a1a"/>
+            <rect x="8"  y="26" width="5" height="4" rx="1" fill="#1a1a1a"/>
+            <rect x="14" y="26" width="5" height="4" rx="1" fill="#1a1a1a"/>
+            <rect x="20" y="26" width="5" height="4" rx="1" fill="#1a1a1a"/>
+            <rect x="26" y="26" width="4" height="4" rx="1" fill="#1a1a1a"/>
+          </svg>
+          <span style={{ fontSize: '1.5rem', letterSpacing: '0.2em', fontWeight: 700, color: '#fff' }}>mosa</span>
+        </div>
         <CardTitle>{isSignUp ? 'Create Account' : 'Login'}</CardTitle>
         
         {error && <ErrorText>{error}</ErrorText>}
