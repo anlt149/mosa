@@ -121,22 +121,14 @@ const SubmitButton = styled.button<{ $active: boolean }>`
   }
 `;
 
-/* ── Header bar ─────────────────────────────────────────────── */
+/* ── Form card header ───────────────────────────────────────── */
 
-const Header = styled.div`
+const FormHeader = styled.div`
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding-bottom: 1rem;
   border-bottom: 1px solid #222;
-`;
-
-const LogoutLink = styled.span`
-  font-size: 0.8rem;
-  color: #555;
-  cursor: pointer;
-  text-decoration: underline;
-  &:hover { color: #aaa; }
+  overflow: hidden;
 `;
 
 /* ══════════════════════════════════════════════════════════════ */
@@ -175,10 +167,6 @@ export function Dashboard() {
 
   /* ── Handlers ──────────────────────────────────────────────── */
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    window.location.reload();
-  };
 
   const handleSubmit = useCallback(async () => {
     if (submitting) return;
@@ -243,12 +231,11 @@ export function Dashboard() {
 
           {/* ── Data Entry ── */}
           <Card>
-            <Header>
-              <CardTitle style={{ borderBottom: 'none', paddingBottom: 0, marginBottom: 0 }}>
-                {isEditMode ? `Editing ${selectedDate}` : `Today — ${today}`}
+            <FormHeader>
+              <CardTitle style={{ borderBottom: 'none', paddingBottom: 0, marginBottom: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {isEditMode ? `Edit: ${selectedDate}` : `Today — ${today}`}
               </CardTitle>
-              <LogoutLink onClick={handleLogout}>Logout</LogoutLink>
-            </Header>
+            </FormHeader>
 
             {/* Mood 0–10 */}
             <Section $active={true}>

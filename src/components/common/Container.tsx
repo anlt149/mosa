@@ -4,10 +4,9 @@ export const Container = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  min-height: 100vh;
   width: 100%;
-  padding: 1rem;
+  padding: 1.5rem 1rem 3rem;
+  box-sizing: border-box;
 `;
 
 export const MainContent = styled.main`

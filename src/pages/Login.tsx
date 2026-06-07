@@ -1,8 +1,19 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { Container, Card, CardTitle, Input, Label, Button } from '../components/common';
+import { Card, CardTitle, Input, Label, Button } from '../components/common';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
+
+const LoginWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  width: 100%;
+  padding: 1.5rem;
+  box-sizing: border-box;
+`;
 
 const FormGroup = styled.div`
   display: flex;
@@ -54,7 +65,7 @@ export function Login() {
   };
 
   return (
-    <Container>
+    <LoginWrapper>
       <Card as="form" onSubmit={handleAuth}>
         {/* mosa logo */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
@@ -136,6 +147,6 @@ export function Login() {
           </span>
         </HelperText>
       </Card>
-    </Container>
+    </LoginWrapper>
   );
 }
