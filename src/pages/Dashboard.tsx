@@ -1,108 +1,179 @@
 import styled from 'styled-components';
 import { supabase } from '../lib/supabaseClient';
-import { Container, Card, CardTitle, Button, MainContent, Input } from '../components/common';
-import { useVimNavigation } from '../hooks/useVimNavigation';
+import { Container, Card, CardTitle, MainContent, Input } from '../components/common';
 import { ActivityHeatmap } from '../components/ActivityHeatmap';
 import { useState, useEffect, useCallback } from 'react';
 
-const DashboardGrid = styled.div`
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 2rem;
-  align-items: start;
+/* ── Layout ─────────────────────────────────────────────────── */
 
-  @media (min-width: 850px) {
-    grid-template-columns: 400px 1fr;
-  }
+const PageLayout = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
 `;
+
+/* ── Section card ───────────────────────────────────────────── */
 
 const Section = styled.div<{ $active: boolean }>`
   border: 2px solid ${props => props.$active ? '#fff' : '#333'};
-  padding: 1.5rem;
-  transition: all 0.2s ease;
+  padding: 1.25rem 1.5rem;
+  transition: border-color 0.2s ease;
   display: flex;
   flex-direction: column;
   gap: 1rem;
 `;
 
-const SectionHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-`;
-
 const SectionTitle = styled.h3`
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1rem;
   font-weight: normal;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   color: ${props => props.color || '#fff'};
 `;
 
-const ScoreDisplay = styled.div`
-  font-size: 3rem;
-  font-weight: bold;
-  text-align: center;
-`;
+/* ── Score row (+/- controls) ────────────────────────────────── */
 
-const Slider = styled.div`
+const ScoreRow = styled.div`
   display: flex;
-  gap: 0.5rem;
-  justify-content: space-between;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
 `;
 
-const SliderTick = styled.div<{ $active: boolean }>`
-  height: 20px;
+const ScoreDisplay = styled.div`
+  font-size: 3.5rem;
+  font-weight: bold;
+  min-width: 4rem;
+  text-align: center;
+  color: inherit;
+`;
+
+const StepButton = styled.button`
+  background: none;
+  border: 2px solid #444;
+  color: #fff;
+  font-size: 1.75rem;
+  line-height: 1;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s, color 0.15s;
+
+  &:hover {
+    border-color: #fff;
+  }
+  &:active {
+    background: #fff;
+    color: #000;
+  }
+  &:disabled {
+    opacity: 0.25;
+    cursor: default;
+  }
+`;
+
+/* ── Tick bar (visual only, no click) ────────────────────────── */
+
+const TickBar = styled.div`
+  display: flex;
+  gap: 3px;
+`;
+
+const Tick = styled.div<{ $active: boolean }>`
   flex: 1;
+  height: 4px;
   background-color: ${props => props.$active ? '#fff' : '#333'};
   transition: background-color 0.1s;
 `;
 
-const SubmitButton = styled(Button) <{ $active: boolean }>`
-  border-color: ${props => props.$active ? '#fff' : '#333'};
+/* ── Submit button ───────────────────────────────────────────── */
+
+const SubmitButton = styled.button<{ $active: boolean }>`
+  width: 100%;
+  padding: 1rem;
+  font-size: 1rem;
+  font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  border: 2px solid ${props => props.$active ? '#fff' : '#333'};
   background-color: ${props => props.$active ? '#fff' : '#000'};
   color: ${props => props.$active ? '#000' : '#666'};
-  padding: 1rem;
-  font-size: 1.25rem;
-  margin-top: 1rem;
+  transition: all 0.15s;
+  margin-top: 0.5rem;
+
+  &:hover:not(:disabled) {
+    border-color: #fff;
+    color: #fff;
+    background: #000;
+  }
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
 `;
 
+/* ── Header bar ─────────────────────────────────────────────── */
+
+const Header = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #222;
+`;
+
+const LogoutLink = styled.span`
+  font-size: 0.8rem;
+  color: #555;
+  cursor: pointer;
+  text-decoration: underline;
+  &:hover { color: #aaa; }
+`;
+
+/* ══════════════════════════════════════════════════════════════ */
+
 export function Dashboard() {
-  const [mood, setMood] = useState(3);
+  const [mood, setMood] = useState(5);
   const [energy, setEnergy] = useState(5);
   const [note, setNote] = useState('');
-  const [activeSection, setActiveSectionState] = useState<'mood' | 'energy' | 'note' | 'submit'>('mood');
   const [logs, setLogs] = useState<any[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(''); // empty means today/new entry
-  const isEditMode = selectedDate && selectedDate !== new Date().toISOString().split('T')[0];
+  const [selectedDate, setSelectedDate] = useState('');
+
+  const today = new Date().toISOString().split('T')[0];
+  const isEditMode = selectedDate && selectedDate !== today;
+
+  /* ── Data fetching ─────────────────────────────────────────── */
 
   const fetchLogs = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Fetch last 90 days of logs
     const ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-    const dateStr = ninetyDaysAgo.toISOString().split('T')[0];
 
     const { data, error } = await supabase
       .from('daily_logs')
       .select('*')
-      .gte('log_date', dateStr)
+      .gte('log_date', ninetyDaysAgo.toISOString().split('T')[0])
       .order('log_date', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching logs:', error);
-    } else if (data) {
-      setLogs(data);
-    }
+    if (error) console.error('Error fetching logs:', error);
+    else if (data) setLogs(data);
   }, []);
 
-  useEffect(() => {
-    fetchLogs();
-  }, [fetchLogs]);
+  useEffect(() => { fetchLogs(); }, [fetchLogs]);
+
+  /* ── Handlers ──────────────────────────────────────────────── */
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -114,9 +185,9 @@ export function Dashboard() {
     setSubmitting(true);
 
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) { setSubmitting(false); return; }
 
-    const logDate = selectedDate || new Date().toISOString().split('T')[0];
+    const logDate = selectedDate || today;
 
     const { error } = await supabase
       .from('daily_logs')
@@ -125,118 +196,125 @@ export function Dashboard() {
         log_date: logDate,
         mood_score: mood,
         energy_level: energy,
-        note: note,
-      }, {
-        onConflict: 'user_id,log_date',
-      });
+        note,
+      }, { onConflict: 'user_id,log_date' });
 
     if (error) {
       console.error('Error submitting log:', error);
-      alert('Failed to submit log: ' + error.message);
+      alert('Failed to save: ' + error.message);
     } else {
-      fetchLogs();
+      await fetchLogs();
     }
-    setSubmitting(false);
-    // Reset after new entry
-    if (!isEditMode) {
-      setMood(3);
-      setEnergy(5);
-      setNote('');
-    }
-    setSelectedDate('');
-  }, [mood, energy, note, selectedDate, isEditMode, fetchLogs, submitting]);
 
-  useVimNavigation({
-    activeSection,
-    setActiveSection: (section) => setActiveSectionState(section),
-    mood,
-    setMood,
-    energy,
-    setEnergy,
-    onSubmit: handleSubmit
-  });
+    setSubmitting(false);
+    if (!isEditMode) { setMood(5); setEnergy(5); setNote(''); }
+    setSelectedDate('');
+  }, [mood, energy, note, selectedDate, isEditMode, fetchLogs, submitting, today]);
 
   const handleDateSelect = (dateStr: string) => {
     setSelectedDate(dateStr);
-    // Find existing log for this date if any
     const existing = logs.find(l => l.log_date === dateStr);
     if (existing) {
       setMood(existing.mood_score);
       setEnergy(existing.energy_level);
       setNote(existing.note || '');
     } else {
-      setMood(3);
+      setMood(5);
       setEnergy(5);
       setNote('');
     }
-    setActiveSectionState('mood');
   };
+
+  /* ── Render ────────────────────────────────────────────────── */
 
   return (
     <Container>
       <MainContent>
-        <DashboardGrid>
+        <PageLayout>
 
-          {/* Left Column: Data Entry */}
+          {/* ── Heatmap (top) ── */}
+          <Card style={{ padding: '1.5rem' }}>
+            <ActivityHeatmap
+              logs={logs}
+              onSelectDate={handleDateSelect}
+              selectedDate={selectedDate}
+            />
+          </Card>
+
+          {/* ── Data Entry ── */}
           <Card>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #333', paddingBottom: '1rem', marginBottom: '1rem' }}>
-              <CardTitle style={{ borderBottom: 'none', paddingBottom: 0, marginBottom: 0 }}>Daily Log</CardTitle>
-              <span style={{ fontSize: '0.875rem', color: '#666', cursor: 'pointer', textDecoration: 'underline' }} onClick={handleLogout}>Logout</span>
-            </div>
+            <Header>
+              <CardTitle style={{ borderBottom: 'none', paddingBottom: 0, marginBottom: 0 }}>
+                {isEditMode ? `Editing ${selectedDate}` : `Today — ${today}`}
+              </CardTitle>
+              <LogoutLink onClick={handleLogout}>Logout</LogoutLink>
+            </Header>
 
-            <Section $active={activeSection === 'mood'} onClick={() => setActiveSectionState('mood')}>
-              <SectionHeader>
-                <SectionTitle color={activeSection === 'mood' ? '#fff' : '#666'}>Mood (1-5)</SectionTitle>
-              </SectionHeader>
-              <ScoreDisplay style={{ color: activeSection === 'mood' ? '#fff' : '#666' }}>{mood}</ScoreDisplay>
-              <Slider>
-                {[1, 2, 3, 4, 5].map(val => (
-                  <SliderTick key={val} $active={val <= mood} onClick={() => setMood(val)} />
+            {/* Mood 0–10 */}
+            <Section $active={true}>
+              <SectionTitle color="#aaa">Mood (0–10)</SectionTitle>
+              <ScoreRow>
+                <StepButton
+                  onClick={() => setMood(v => Math.max(0, v - 1))}
+                  disabled={mood <= 0}
+                  aria-label="Decrease mood"
+                >−</StepButton>
+                <ScoreDisplay>{mood}</ScoreDisplay>
+                <StepButton
+                  onClick={() => setMood(v => Math.min(10, v + 1))}
+                  disabled={mood >= 10}
+                  aria-label="Increase mood"
+                >+</StepButton>
+              </ScoreRow>
+              <TickBar>
+                {Array.from({ length: 11 }, (_, i) => (
+                  <Tick key={i} $active={i <= mood} />
                 ))}
-              </Slider>
+              </TickBar>
             </Section>
 
-            {/* Energy Section */}
-            <Section $active={activeSection === 'energy'} onClick={() => setActiveSectionState('energy')}>
-              <SectionHeader>
-                <SectionTitle color={activeSection === 'energy' ? '#fff' : '#666'}>Energy (1-10)</SectionTitle>
-              </SectionHeader>
-              <ScoreDisplay style={{ color: activeSection === 'energy' ? '#fff' : '#666' }}>{energy}</ScoreDisplay>
-              <Slider>
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(val => (
-                  <SliderTick key={val} $active={val <= energy} onClick={() => setEnergy(val)} />
+            {/* Energy 0–10 */}
+            <Section $active={true}>
+              <SectionTitle color="#aaa">Energy (0–10)</SectionTitle>
+              <ScoreRow>
+                <StepButton
+                  onClick={() => setEnergy(v => Math.max(0, v - 1))}
+                  disabled={energy <= 0}
+                  aria-label="Decrease energy"
+                >−</StepButton>
+                <ScoreDisplay>{energy}</ScoreDisplay>
+                <StepButton
+                  onClick={() => setEnergy(v => Math.min(10, v + 1))}
+                  disabled={energy >= 10}
+                  aria-label="Increase energy"
+                >+</StepButton>
+              </ScoreRow>
+              <TickBar>
+                {Array.from({ length: 11 }, (_, i) => (
+                  <Tick key={i} $active={i <= energy} />
                 ))}
-              </Slider>
+              </TickBar>
             </Section>
 
-            {/* Note Input */}
+            {/* Note */}
             <Input
-              placeholder="One‑line journal (optional)"
+              id="note-input"
+              placeholder="One-line journal (optional)"
               value={note}
               onChange={e => setNote(e.target.value)}
-              style={{ marginTop: '0.5rem' }}
             />
 
-            {/* Submit / Update */}
+            {/* Submit */}
             <SubmitButton
-              $active={activeSection === 'submit'}
+              $active={!submitting}
               onClick={handleSubmit}
               disabled={submitting}
             >
-              {submitting ? 'SAVING...' : (isEditMode ? 'UPDATE (ENTER)' : 'SUBMIT (ENTER)')}
+              {submitting ? 'Saving…' : isEditMode ? 'Update' : 'Submit'}
             </SubmitButton>
-
-            <div style={{ color: '#666', fontSize: '0.875rem', textAlign: 'center', marginTop: '1rem' }}>
-              <strong style={{ color: '#aaa' }}>j/k</strong> up/down &nbsp;|&nbsp; <strong style={{ color: '#aaa' }}>h/l</strong> left/right
-            </div>
           </Card>
 
-          {/* Right Column: Visualization */}
-          <Card style={{ padding: '2rem' }}>
-            <ActivityHeatmap logs={logs} onSelectDate={handleDateSelect} selectedDate={selectedDate} />
-          </Card>
-
-        </DashboardGrid>
+        </PageLayout>
       </MainContent>
     </Container>
   );

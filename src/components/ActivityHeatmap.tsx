@@ -16,11 +16,12 @@ const HeatmapHeader = styled.div`
 
 const HeatmapTitle = styled.h3`
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1rem;
   font-weight: normal;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   color: #fff;
+  text-align: center;
 `;
 
 const NavButton = styled.button`
@@ -172,10 +173,10 @@ export function ActivityHeatmap({ logs, onSelectDate, selectedDate }: ActivityHe
           let tooltip = day.dateStr;
 
           if (log) {
-            const moodScore = log.mood_score / 5;
+            const moodScore = log.mood_score / 10;
             const energyScore = log.energy_level / 10;
             intensity = (moodScore * 0.5) + (energyScore * 0.5);
-            tooltip = `${day.dateStr}: Mood ${log.mood_score}/5 | Energy ${log.energy_level}/10`;
+            tooltip = `${day.dateStr}: Mood ${log.mood_score}/10 | Energy ${log.energy_level}/10`;
             if (log.note) {
               tooltip += ` | ${log.note}`;
             }
