@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import { useState } from 'react';
 import styled from 'styled-components';
 
 const HeatmapContainer = styled.div`
@@ -160,7 +161,7 @@ export function ActivityHeatmap({ logs, onSelectDate, selectedDate }: ActivityHe
 
       <Grid>
         {weekDays.map(d => <DayLabel key={d}>{d}</DayLabel>)}
-        
+
         {days.map((day, idx) => {
           if (day.isPlaceholder) {
             return <DaySquare key={idx} $intensity={0} $isPlaceholder={true} $selected={false} />;
@@ -176,7 +177,7 @@ export function ActivityHeatmap({ logs, onSelectDate, selectedDate }: ActivityHe
             intensity = (moodScore * 0.5) + (energyScore * 0.5);
             tooltip = `${day.dateStr}: Mood ${log.mood_score}/5 | Energy ${log.energy_level}/10`;
             if (log.note) {
-               tooltip += ` | ${log.note}`;
+              tooltip += ` | ${log.note}`;
             }
           }
 

@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { supabase } from '../lib/supabaseClient';
 import { Container, Card, CardTitle, Button, MainContent, Input } from '../components/common';
 import { useVimNavigation } from '../hooks/useVimNavigation';
 import { ActivityHeatmap } from '../components/ActivityHeatmap';
+import { useState, useEffect, useCallback } from 'react';
 
 const DashboardGrid = styled.div`
   display: grid;
@@ -59,7 +59,7 @@ const SliderTick = styled.div<{ $active: boolean }>`
   transition: background-color 0.1s;
 `;
 
-const SubmitButton = styled(Button)<{ $active: boolean }>`
+const SubmitButton = styled(Button) <{ $active: boolean }>`
   border-color: ${props => props.$active ? '#fff' : '#333'};
   background-color: ${props => props.$active ? '#fff' : '#000'};
   color: ${props => props.$active ? '#000' : '#666'};
@@ -72,7 +72,7 @@ export function Dashboard() {
   const [mood, setMood] = useState(3);
   const [energy, setEnergy] = useState(5);
   const [note, setNote] = useState('');
-  const [activeSection, setActiveSection] = useState<'mood' | 'energy' | 'submit'>('mood');
+  const [activeSection, setActiveSectionState] = useState<'mood' | 'energy' | 'note' | 'submit'>('mood');
   const [logs, setLogs] = useState<any[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [selectedDate, setSelectedDate] = useState(''); // empty means today/new entry
@@ -148,7 +148,7 @@ export function Dashboard() {
 
   useVimNavigation({
     activeSection,
-    setActiveSection,
+    setActiveSection: (section) => setActiveSectionState(section),
     mood,
     setMood,
     energy,
@@ -169,14 +169,14 @@ export function Dashboard() {
       setEnergy(5);
       setNote('');
     }
-    setActiveSection('mood');
+    setActiveSectionState('mood');
   };
 
   return (
     <Container>
       <MainContent>
         <DashboardGrid>
-          
+
           {/* Left Column: Data Entry */}
           <Card>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #333', paddingBottom: '1rem', marginBottom: '1rem' }}>
@@ -184,7 +184,7 @@ export function Dashboard() {
               <span style={{ fontSize: '0.875rem', color: '#666', cursor: 'pointer', textDecoration: 'underline' }} onClick={handleLogout}>Logout</span>
             </div>
 
-            <Section $active={activeSection === 'mood'} onClick={() => setActiveSection('mood')}>
+            <Section $active={activeSection === 'mood'} onClick={() => setActiveSectionState('mood')}>
               <SectionHeader>
                 <SectionTitle color={activeSection === 'mood' ? '#fff' : '#666'}>Mood (1-5)</SectionTitle>
               </SectionHeader>
@@ -197,7 +197,7 @@ export function Dashboard() {
             </Section>
 
             {/* Energy Section */}
-            <Section $active={activeSection === 'energy'} onClick={() => setActiveSection('energy')}>
+            <Section $active={activeSection === 'energy'} onClick={() => setActiveSectionState('energy')}>
               <SectionHeader>
                 <SectionTitle color={activeSection === 'energy' ? '#fff' : '#666'}>Energy (1-10)</SectionTitle>
               </SectionHeader>
@@ -218,8 +218,8 @@ export function Dashboard() {
             />
 
             {/* Submit / Update */}
-            <SubmitButton 
-              $active={activeSection === 'submit'} 
+            <SubmitButton
+              $active={activeSection === 'submit'}
               onClick={handleSubmit}
               disabled={submitting}
             >
@@ -227,7 +227,7 @@ export function Dashboard() {
             </SubmitButton>
 
             <div style={{ color: '#666', fontSize: '0.875rem', textAlign: 'center', marginTop: '1rem' }}>
-              <strong style={{color:'#aaa'}}>j/k</strong> up/down &nbsp;|&nbsp; <strong style={{color:'#aaa'}}>h/l</strong> left/right
+              <strong style={{ color: '#aaa' }}>j/k</strong> up/down &nbsp;|&nbsp; <strong style={{ color: '#aaa' }}>h/l</strong> left/right
             </div>
           </Card>
 
