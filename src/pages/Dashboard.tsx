@@ -152,6 +152,8 @@ const FormHeader = styled.div`
   padding-bottom: 1rem;
   border-bottom: 1px solid #222;
   overflow: hidden;
+  width: 100%;
+  min-width: 0;
 `;
 
 const ViewSection = styled.div`
@@ -529,7 +531,7 @@ export function Dashboard() {
           {/* Left Column Stack */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', width: '100%' }}>
             {/* Heatmap */}
-            <Card style={{ padding: '1.5rem' }}>
+            <Card>
               <ActivityHeatmap
                 logs={logs}
                 onSelectDate={handleDateSelect}
@@ -538,7 +540,7 @@ export function Dashboard() {
             </Card>
 
             {/* Recent Notes */}
-            <Card style={{ padding: '1.5rem' }}>
+            <Card>
               <CardTitle style={{ borderBottom: '1px solid #222', paddingBottom: '0.75rem', marginBottom: '1rem' }}>
                 Recent Notes
               </CardTitle>
@@ -571,8 +573,8 @@ export function Dashboard() {
           {/* ── Details / Data Entry (right/bottom) ── */}
           <Card>
             <FormHeader>
-              <CardTitle style={{ borderBottom: 'none', paddingBottom: 0, marginBottom: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {!isPastDay ? `Today — ${today}` : `Editing History — ${selectedDate}`}
+              <CardTitle style={{ borderBottom: 'none', paddingBottom: 0, marginBottom: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', minWidth: 0 }}>
+                {!isPastDay ? `Today — ${today}` : `Entry — ${selectedDate}`}
               </CardTitle>
             </FormHeader>
 

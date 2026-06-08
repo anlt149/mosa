@@ -69,22 +69,24 @@ const DaySquare = styled.div<{ $intensity: number; $isPlaceholder: boolean; $sel
   cursor: ${({ $isPlaceholder }) => $isPlaceholder ? 'default' : 'pointer'};
   touch-action: manipulation;
   
-  &:hover::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #fff;
-    color: #000;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 10px;
-    white-space: nowrap;
-    z-index: 10;
-    margin-bottom: 4px;
-    pointer-events: none;
-    display: ${({ $isPlaceholder }) => $isPlaceholder ? 'none' : 'block'};
+  @media (hover: hover) {
+    &:hover::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #fff;
+      color: #000;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      white-space: nowrap;
+      z-index: 10;
+      margin-bottom: 4px;
+      pointer-events: none;
+      display: ${({ $isPlaceholder }) => $isPlaceholder ? 'none' : 'block'};
+    }
   }
 `;
 const DayNumber = styled.div`
@@ -93,6 +95,7 @@ const DayNumber = styled.div`
   position: absolute;
   top: 2px;
   left: 2px;
+  pointer-events: none;
 `;
 
 const Legend = styled.div`
