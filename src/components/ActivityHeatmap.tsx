@@ -67,6 +67,7 @@ const DaySquare = styled.div<{ $intensity: number; $isPlaceholder: boolean; $sel
   border: ${({ $selected }) => $selected ? '2px solid #fff' : '2px solid transparent'};
   position: relative;
   cursor: ${({ $isPlaceholder }) => $isPlaceholder ? 'default' : 'pointer'};
+  touch-action: manipulation;
   
   &:hover::after {
     content: attr(data-tooltip);
