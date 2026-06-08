@@ -57,8 +57,12 @@ export function Login() {
         if (error) throw error;
         navigate('/');
       }
-    } catch (err: any) {
-      setError(err.message || 'An error occurred during authentication.');
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('An error occurred during authentication.');
+      }
     } finally {
       setLoading(false);
     }

@@ -108,8 +108,15 @@ const LegendSquare = styled.div<{ color: string }>`
   background-color: ${props => props.color};
 `;
 
+interface HeatmapLog {
+  log_date: string;
+  mood_score: number;
+  energy_level: number;
+  note?: string | null;
+}
+
 interface ActivityHeatmapProps {
-  logs: any[];
+  logs: HeatmapLog[];
   onSelectDate: (dateStr: string) => void;
   selectedDate: string;
 }
@@ -147,7 +154,7 @@ export function ActivityHeatmap({ logs, onSelectDate, selectedDate }: ActivityHe
   const logMap = logs.reduce((acc, log) => {
     acc[log.log_date] = log;
     return acc;
-  }, {} as Record<string, any>);
+  }, {} as Record<string, HeatmapLog>);
 
   const monthName = currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' });
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];

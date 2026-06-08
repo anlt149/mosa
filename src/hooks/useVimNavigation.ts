@@ -8,6 +8,7 @@ export interface VimNavConfig {
   energy: number;
   setEnergy: (val: number | ((prev: number) => number)) => void;
   onSubmit: () => void;
+  disabled?: boolean;
 }
 
 export function useVimNavigation({
@@ -17,15 +18,18 @@ export function useVimNavigation({
   setMood,
   energy,
   setEnergy,
-  onSubmit
+  onSubmit,
+  disabled = false
 }: VimNavConfig) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Avoid triggering navigation if the user is typing in a text field
-      if (document.activeElement?.tagName === 'INPUT' && (document.activeElement as HTMLInputElement).type === 'text') {
-        // If they press Enter while typing, we can let it submit or just unfocus
-        if (e.key === 'Enter') {
-          (document.activeElement as HTMLInputElement).blur();
+      if (disabled) return;
+      // Avoid triggering navigation if the user is typing in a text field or textarea
+      const activeTag = document.activeElement?.tagName;
+      if (activeTag === 'TEXTAREA' || (activeTag === 'INPUT' && (document.activeElement as HTMLInputElement).type === 'text')) {
+        // Allow Escape to blur the text field/textarea and resume Vim navigation
+        if (e.key === 'Escape') {
+          (document.activeElement as HTMLElement).blur();
         }
         return;
       }
@@ -77,5 +81,5 @@ export function useVimNavigation({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeSection, mood, energy, setMood, setEnergy, setActiveSection, onSubmit]);
+  }, [activeSection, mood, energy, setMood, setEnergy, setActiveSection, onSubmit, disabled]);
 }
