@@ -2,7 +2,7 @@ CREATE TABLE daily_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   log_date DATE NOT NULL DEFAULT CURRENT_DATE,
-  mood_score INT2 NOT NULL CHECK (mood_score >= 1 AND mood_score <= 5),
+  mood_score INT2 NOT NULL CHECK (mood_score >= 1 AND mood_score <= 10),
   energy_level INT2 NOT NULL CHECK (energy_level >= 1 AND energy_level <= 10),
   tags TEXT[] DEFAULT '{}',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
