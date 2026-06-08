@@ -56,10 +56,10 @@ const DaySquare = styled.div<{ $intensity: number; $isPlaceholder: boolean; $sel
   background-color: ${({ $intensity, $isPlaceholder }) => {
     if ($isPlaceholder) return 'transparent';
     if ($intensity === 0) return '#161b22'; // Empty
-    if ($intensity < 0.3) return '#0e4429';
-    if ($intensity < 0.6) return '#006d32';
-    if ($intensity < 0.8) return '#26a641';
-    return '#39d353'; // High
+    if ($intensity < 0.3) return '#450a0a'; // Low: Deep dark red/rust
+    if ($intensity < 0.6) return '#7c2d12'; // Medium-Low: Burnt orange/rust
+    if ($intensity < 0.8) return '#d97706'; // Medium-High: Golden amber
+    return '#facc15'; // High: Bright sunshine gold
   }};
   border: ${({ $selected }) => $selected ? '2px solid #fff' : '2px solid transparent'};
   position: relative;
@@ -184,9 +184,6 @@ export function ActivityHeatmap({ logs, onSelectDate, selectedDate }: ActivityHe
             const energyScore = log.energy_level / 10;
             intensity = (moodScore * 0.5) + (energyScore * 0.5);
             tooltip = `${day.dateStr}: Mood ${log.mood_score}/10 | Energy ${log.energy_level}/10`;
-            if (log.note) {
-              tooltip += ` | ${log.note}`;
-            }
           }
 
           return (
@@ -207,10 +204,10 @@ export function ActivityHeatmap({ logs, onSelectDate, selectedDate }: ActivityHe
       <Legend>
         Less
         <LegendSquare color="#161b22" />
-        <LegendSquare color="#0e4429" />
-        <LegendSquare color="#006d32" />
-        <LegendSquare color="#26a641" />
-        <LegendSquare color="#39d353" />
+        <LegendSquare color="#450a0a" />
+        <LegendSquare color="#7c2d12" />
+        <LegendSquare color="#d97706" />
+        <LegendSquare color="#facc15" />
         More
       </Legend>
     </HeatmapContainer>
