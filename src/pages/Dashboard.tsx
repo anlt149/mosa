@@ -12,12 +12,12 @@ const PageLayout = styled.div`
   grid-template-columns: 1fr;
   gap: 2rem;
   width: 100%;
-  max-width: 640px;
+  max-width: 560px;
   margin: 0 auto;
 
   @media (min-width: 992px) {
-    grid-template-columns: 1.2fr 1fr;
-    max-width: 1200px;
+    grid-template-columns: 1fr 1fr;
+    max-width: 960px;
     align-items: start;
   }
 `;

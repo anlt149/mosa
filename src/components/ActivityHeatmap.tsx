@@ -6,6 +6,9 @@ const HeatmapContainer = styled.div`
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  max-width: 480px;
+  margin: 0 auto;
+  width: 100%;
 `;
 
 const HeatmapHeader = styled.div`
@@ -56,10 +59,10 @@ const DaySquare = styled.div<{ $intensity: number; $isPlaceholder: boolean; $sel
   background-color: ${({ $intensity, $isPlaceholder }) => {
     if ($isPlaceholder) return 'transparent';
     if ($intensity === 0) return '#161b22'; // Empty
-    if ($intensity < 0.3) return '#450a0a'; // Low: Deep dark red/rust
-    if ($intensity < 0.6) return '#7c2d12'; // Medium-Low: Burnt orange/rust
-    if ($intensity < 0.8) return '#d97706'; // Medium-High: Golden amber
-    return '#facc15'; // High: Bright sunshine gold
+    if ($intensity < 0.3) return '#450a0a'; // Low: Dark red/rust (dark/warm)
+    if ($intensity < 0.6) return '#b45309'; // Medium-Low: Warm orange
+    if ($intensity < 0.8) return '#0284c7'; // Medium-High: Calm blue
+    return '#10b981'; // High: Happy green
   }};
   border: ${({ $selected }) => $selected ? '2px solid #fff' : '2px solid transparent'};
   position: relative;
@@ -205,9 +208,9 @@ export function ActivityHeatmap({ logs, onSelectDate, selectedDate }: ActivityHe
         Less
         <LegendSquare color="#161b22" />
         <LegendSquare color="#450a0a" />
-        <LegendSquare color="#7c2d12" />
-        <LegendSquare color="#d97706" />
-        <LegendSquare color="#facc15" />
+        <LegendSquare color="#b45309" />
+        <LegendSquare color="#0284c7" />
+        <LegendSquare color="#10b981" />
         More
       </Legend>
     </HeatmapContainer>
