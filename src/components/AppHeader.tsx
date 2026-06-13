@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import styled, { keyframes } from 'styled-components';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
+import { LayoutGrid, BookOpen, LogOut, Home } from 'lucide-react';
 
 /* ── Animations ────────────────────────────────────────────── */
 
@@ -96,11 +98,11 @@ const Dropdown = styled.div`
   animation: ${fadeIn} 0.15s ease;
 `;
 
-const DropdownItem = styled.button`
+const DropdownItem = styled.button<{ $active?: boolean }>`
   width: 100%;
-  background: none;
+  background: ${p => p.$active ? '#161616' : 'none'};
   border: none;
-  color: #ccc;
+  color: ${p => p.$active ? '#fff' : '#ccc'};
   font-family: inherit;
   font-size: 0.875rem;
   letter-spacing: 0.08em;
@@ -134,6 +136,8 @@ interface AppHeaderProps {
 export function AppHeader({ onLogout }: AppHeaderProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   // Close on outside click
   useEffect(() => {
@@ -156,10 +160,15 @@ export function AppHeader({ onLogout }: AppHeaderProps) {
     }
   };
 
+  const handleNavigate = (path: string) => {
+    setOpen(false);
+    navigate(path);
+  };
+
   return (
     <Bar>
       {/* Logo + wordmark */}
-      <Brand>
+      <Brand style={{ cursor: 'pointer' }} onClick={() => handleNavigate('/')}>
         <BrandLogo
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 32 32"
@@ -211,13 +220,21 @@ export function AppHeader({ onLogout }: AppHeaderProps) {
 
         {open && (
           <Dropdown>
+            <DropdownItem onClick={() => handleNavigate('/')} $active={location.pathname === '/'}>
+              <Home size={14} />
+              Home
+            </DropdownItem>
+            <DropdownItem onClick={() => handleNavigate('/journal')} $active={location.pathname === '/journal'}>
+              <BookOpen size={14} />
+              Journal
+            </DropdownItem>
+            <DropdownItem onClick={() => handleNavigate('/year')} $active={location.pathname === '/year'}>
+              <LayoutGrid size={14} />
+              Year in Pixels
+            </DropdownItem>
+            <DropdownDivider />
             <DropdownItem onClick={handleLogout}>
-              {/* logout icon */}
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                <polyline points="16 17 21 12 16 7"/>
-                <line x1="21" y1="12" x2="9" y2="12"/>
-              </svg>
+              <LogOut size={14} />
               Logout
             </DropdownItem>
             <DropdownDivider />

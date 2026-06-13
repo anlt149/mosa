@@ -4,6 +4,7 @@ import { Container, Card, CardTitle, MainContent, TextArea } from '../components
 import { ActivityHeatmap } from '../components/ActivityHeatmap';
 import { useState, useEffect, useCallback } from 'react';
 import { useVimNavigation } from '../hooks/useVimNavigation';
+import { useSearchParams } from 'react-router-dom';
 
 /* ── Layout ─────────────────────────────────────────────────── */
 
@@ -353,15 +354,25 @@ interface ToastMessage {
 /* ══════════════════════════════════════════════════════════════ */
 
 export function Dashboard() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlDate = searchParams.get('date');
+
   const [mood, setMood] = useState(5);
   const [energy, setEnergy] = useState(5);
   const [note, setNote] = useState('');
   const [logs, setLogs] = useState<DailyLog[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedDate, setSelectedDate] = useState(urlDate || '');
   const [activeSection, setActiveSection] = useState<'mood' | 'energy' | 'note' | 'submit'>('mood');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // Sync state with URL parameter if it changes
+  useEffect(() => {
+    if (urlDate) {
+      setSelectedDate(urlDate);
+    }
+  }, [urlDate]);
 
   const today = new Date().toISOString().split('T')[0];
   const isPastDay = !!(selectedDate && selectedDate !== today);
@@ -504,6 +515,7 @@ export function Dashboard() {
   const handleReset = () => {
     if (isPastDay) {
       setSelectedDate('');
+      setSearchParams({});
     } else {
       setMood(5);
       setEnergy(5);
@@ -514,6 +526,7 @@ export function Dashboard() {
 
   const handleDateSelect = (dateStr: string) => {
     setSelectedDate(dateStr);
+    setSearchParams({ date: dateStr });
     setActiveSection('mood');
   };
 

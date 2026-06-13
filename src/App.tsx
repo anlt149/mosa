@@ -3,6 +3,8 @@ import { AuthGuard } from './components/AuthGuard';
 import { AppHeader } from './components/AppHeader';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
+import { YearInPixels } from './pages/YearInPixels';
+import { Home } from './pages/Home';
 import styled from 'styled-components';
 
 const AppShell = styled.div`
@@ -22,7 +24,29 @@ function App() {
             <AuthGuard>
               <AppShell>
                 <AppHeader />
+                <Home />
+              </AppShell>
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/journal"
+          element={
+            <AuthGuard>
+              <AppShell>
+                <AppHeader />
                 <Dashboard />
+              </AppShell>
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/year"
+          element={
+            <AuthGuard>
+              <AppShell>
+                <AppHeader />
+                <YearInPixels />
               </AppShell>
             </AuthGuard>
           }
