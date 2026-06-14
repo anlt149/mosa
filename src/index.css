@@ -20,3 +20,7 @@ body {
   color: #fff;
   font-family: var(--font-mono);
 }
+
+#root {
+  width: 100%;
+}
