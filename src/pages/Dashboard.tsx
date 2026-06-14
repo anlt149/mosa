@@ -13,13 +13,31 @@ const PageLayout = styled.div`
   grid-template-columns: 1fr;
   gap: 2rem;
   width: 100%;
-  max-width: 560px;
-  margin: 0 auto;
 
   @media (min-width: 992px) {
-    grid-template-columns: 1fr 1fr;
-    max-width: 960px;
+    grid-template-columns: 1.2fr 1fr;
     align-items: start;
+  }
+`;
+
+const DashboardHeader = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+`;
+
+const HeaderTitle = styled.h1`
+  font-size: 1.75rem;
+  font-weight: normal;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #fff;
+  margin: 0;
+
+  span {
+    color: #10b981;
+    font-weight: bold;
   }
 `;
 
@@ -547,6 +565,11 @@ export function Dashboard() {
   return (
     <Container>
       <MainContent>
+        <DashboardHeader>
+          <HeaderTitle>
+            Mood <span>Tracker</span>
+          </HeaderTitle>
+        </DashboardHeader>
         <PageLayout>
 
           {/* Left Column Stack */}
