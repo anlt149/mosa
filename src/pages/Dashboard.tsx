@@ -1,10 +1,16 @@
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 import { supabase } from '../lib/supabaseClient';
 import { Container, Card, CardTitle, MainContent, TextArea } from '../components/common';
 import { ActivityHeatmap } from '../components/ActivityHeatmap';
 import { useState, useEffect, useCallback } from 'react';
 import { useVimNavigation } from '../hooks/useVimNavigation';
 import { useSearchParams } from 'react-router-dom';
+
+/* ── Animations ──────────────────────────────────────────────── */
+const fadeIn = keyframes`
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
 
 /* ── Layout ─────────────────────────────────────────────────── */
 
@@ -25,6 +31,13 @@ const DashboardHeader = styled.div`
   flex-direction: column;
   gap: 0.5rem;
   margin-bottom: 1.5rem;
+  animation: ${fadeIn} 0.4s ease-out;
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
 `;
 
 const HeaderTitle = styled.h1`
@@ -566,9 +579,11 @@ export function Dashboard() {
     <Container>
       <MainContent>
         <DashboardHeader>
-          <HeaderTitle>
-            Mood <span>Tracker</span>
-          </HeaderTitle>
+          <div>
+            <HeaderTitle>
+              Mood <span>Tracker</span>
+            </HeaderTitle>
+          </div>
         </DashboardHeader>
         <PageLayout>
 

@@ -253,6 +253,58 @@ const TableWrapper = styled.div`
   border: 1px solid #1a1a1a;
 `;
 
+const DesktopTableWrapper = styled(TableWrapper)`
+  display: block;
+  @media (max-width: 767px) {
+    display: none;
+  }
+`;
+
+const MobileTableWrapper = styled.div`
+  display: none;
+  background: #0b0b0b;
+  border: 1px solid #1a1a1a;
+  overflow-x: auto;
+  width: 100%;
+
+  @media (max-width: 767px) {
+    display: block;
+  }
+`;
+
+const MobileTable = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+`;
+
+const MobileTh = styled.th`
+  border-bottom: 1px solid #1a1a1a;
+  border-right: 1px solid #111;
+  padding: 0.6rem 0.4rem;
+  font-size: 0.7rem;
+  font-weight: normal;
+  text-transform: uppercase;
+  color: #fff;
+  text-align: center;
+  white-space: normal;
+  word-break: break-word;
+  max-width: 80px;
+`;
+
+const MobileTd = styled.td<{ $isToday?: boolean }>`
+  border-bottom: 1px solid #1a1a1a;
+  border-right: 1px solid #111;
+  padding: 0.5rem 0.4rem;
+  text-align: center;
+  background: ${props => props.$isToday ? '#10b98108' : 'none'};
+`;
+
+const MobileDayLabel = styled.div<{ $isToday?: boolean }>`
+  font-size: 0.75rem;
+  font-weight: ${props => props.$isToday ? 'bold' : 'normal'};
+  color: ${props => props.$isToday ? '#10b981' : '#888'};
+`;
+
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
@@ -429,11 +481,14 @@ const PRESET_COLORS = [
   '#14b8a6', // Teal
 ];
 
+let cachedHabits: Habit[] | null = null;
+let cachedLogs: HabitLog[] | null = null;
+
 export function Habits() {
   const [view, setView] = useState<'month' | 'year'>('month');
-  const [habits, setHabits] = useState<Habit[]>([]);
-  const [logs, setLogs] = useState<HabitLog[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [habits, setHabits] = useState<Habit[]>(cachedHabits || []);
+  const [logs, setLogs] = useState<HabitLog[]>(cachedLogs || []);
+  const [loading, setLoading] = useState(!cachedHabits);
   const [showForm, setShowForm] = useState(false);
 
   // Form State
@@ -459,7 +514,9 @@ export function Habits() {
 
   // Fetch Habits and Logs
   const fetchData = useCallback(async () => {
-    setLoading(true);
+    if (!cachedHabits) {
+      setLoading(true);
+    }
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -472,6 +529,7 @@ export function Habits() {
 
       if (habitsError) throw habitsError;
       setHabits(habitsData || []);
+      cachedHabits = habitsData;
 
       // 2. Fetch logs for current selected context (current month or current year)
       let startStr = '';
@@ -497,6 +555,7 @@ export function Habits() {
 
       if (logsError) throw logsError;
       setLogs(logsData || []);
+      cachedLogs = logsData;
     } catch (err) {
       console.error('Error fetching habits data:', err);
     } finally {
@@ -803,48 +862,97 @@ export function Habits() {
                     <span style={{ fontSize: '0.85rem' }}>Add a habit on the left to start tracking.</span>
                   </div>
                 ) : (
-                  <TableWrapper>
-                    <Table>
-                      <thead>
-                        <tr>
-                          <Th style={{ width: '160px', textAlign: 'left' }}>Habit</Th>
-                          {monthDays.map(d => (
-                            <Th key={d.day} $isToday={d.isToday}>
-                              {d.label}
-                            </Th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {habits.map(h => (
-                          <tr key={h.id}>
-                            <Td style={{ textOverflow: 'ellipsis' }}>
-                              <HabitRowHeader>
-                                <ColorIndicator $color={h.color} />
-                                <RowHabitName title={h.name}>{h.name}</RowHabitName>
-                              </HabitRowHeader>
-                            </Td>
-                            {monthDays.map(d => {
-                              const isChecked = !!logsMap[`${h.id}_${d.dateStr}`];
-                              return (
-                                <Td key={d.day}>
-                                  <CheckSquare
-                                    $color={h.color}
-                                    $checked={isChecked}
-                                    $isToday={d.isToday}
-                                    onClick={() => handleToggleLog(h.id, d.dateStr)}
-                                    aria-label={`Toggle checkin for ${h.name} on ${d.dateStr}`}
-                                  >
-                                    {isChecked && <Check size={12} />}
-                                  </CheckSquare>
-                                </Td>
-                              );
-                            })}
+                  <>
+                    <DesktopTableWrapper>
+                      <Table>
+                        <thead>
+                          <tr>
+                            <Th style={{ width: '160px', textAlign: 'left' }}>Habit</Th>
+                            {monthDays.map(d => (
+                              <Th key={d.day} $isToday={d.isToday}>
+                                {d.label}
+                              </Th>
+                            ))}
                           </tr>
-                        ))}
-                      </tbody>
-                    </Table>
-                  </TableWrapper>
+                        </thead>
+                        <tbody>
+                          {habits.map(h => (
+                            <tr key={h.id}>
+                              <Td style={{ textOverflow: 'ellipsis' }}>
+                                <HabitRowHeader>
+                                  <ColorIndicator $color={h.color} />
+                                  <RowHabitName title={h.name}>{h.name}</RowHabitName>
+                                </HabitRowHeader>
+                              </Td>
+                              {monthDays.map(d => {
+                                const isChecked = !!logsMap[`${h.id}_${d.dateStr}`];
+                                return (
+                                  <Td key={d.day}>
+                                    <CheckSquare
+                                      $color={h.color}
+                                      $checked={isChecked}
+                                      $isToday={d.isToday}
+                                      onClick={() => handleToggleLog(h.id, d.dateStr)}
+                                      aria-label={`Toggle checkin for ${h.name} on ${d.dateStr}`}
+                                    >
+                                      {isChecked && <Check size={12} />}
+                                    </CheckSquare>
+                                  </Td>
+                                );
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </Table>
+                    </DesktopTableWrapper>
+
+                    <MobileTableWrapper>
+                      <MobileTable>
+                        <thead>
+                          <tr>
+                            <MobileTh style={{ width: '60px', textAlign: 'left' }}>Date</MobileTh>
+                            {habits.map(h => (
+                              <MobileTh key={h.id}>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
+                                  <ColorIndicator $color={h.color} />
+                                  <div style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '60px' }} title={h.name}>
+                                    {h.name}
+                                  </div>
+                                </div>
+                              </MobileTh>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {monthDays.map(d => (
+                            <tr key={d.day}>
+                              <MobileTd $isToday={d.isToday} style={{ textAlign: 'left' }}>
+                                <MobileDayLabel $isToday={d.isToday}>
+                                  {d.day} {d.isToday && '(Today)'}
+                                </MobileDayLabel>
+                              </MobileTd>
+                              {habits.map(h => {
+                                const isChecked = !!logsMap[`${h.id}_${d.dateStr}`];
+                                return (
+                                  <MobileTd key={h.id} $isToday={d.isToday}>
+                                    <CheckSquare
+                                      $color={h.color}
+                                      $checked={isChecked}
+                                      $isToday={d.isToday}
+                                      onClick={() => handleToggleLog(h.id, d.dateStr)}
+                                      aria-label={`Toggle checkin for ${h.name} on ${d.dateStr}`}
+                                    >
+                                      {isChecked && <Check size={12} />}
+                                    </CheckSquare>
+                                  </MobileTd>
+                                );
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </MobileTable>
+                    </MobileTableWrapper>
+                  </>
                 )}
               </>
             ) : (

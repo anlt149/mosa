@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { Container, Card, CardTitle, MainContent } from '../components/common';
@@ -16,6 +16,12 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
+
+/* ── Animations ──────────────────────────────────────────────── */
+const fadeIn = keyframes`
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
 
 /* ── Layout and Containers ──────────────────────────────────── */
 
@@ -137,28 +143,32 @@ const PixelCell = styled.div<{ $color: string; $checked: boolean; $isToday?: boo
   }
 `;
 
-const HeaderRow = styled.div`
+const DashboardHeader = styled.div`
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 1rem;
-  border-bottom: 1px solid #222;
-  padding-bottom: 1.25rem;
+  flex-direction: column;
+  gap: 0.5rem;
   margin-bottom: 1.5rem;
-  width: 100%;
+  animation: ${fadeIn} 0.4s ease-out;
+
+  @media (min-width: 768px) {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
 `;
 
-const PageTitle = styled.h1`
-  margin: 0;
-  font-size: 1.5rem;
+const HeaderTitle = styled.h1`
+  font-size: 1.75rem;
   font-weight: normal;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  letter-spacing: 0.15em;
   color: #fff;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
+  margin: 0;
+
+  span {
+    color: #10b981;
+    font-weight: bold;
+  }
 `;
 
 const YearControls = styled.div`
@@ -557,13 +567,17 @@ interface HabitLog {
   log_date: string;
 }
 
+let cachedLogs: LogEntry[] | null = null;
+let cachedHabits: Habit[] | null = null;
+let cachedHabitLogs: HabitLog[] | null = null;
+
 export function YearInPixels() {
   const navigate = useNavigate();
   const [selectedYear, setSelectedYear] = useState<number>(() => new Date().getFullYear());
-  const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [habits, setHabits] = useState<Habit[]>([]);
-  const [habitLogs, setHabitLogs] = useState<HabitLog[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [logs, setLogs] = useState<LogEntry[]>(cachedLogs || []);
+  const [habits, setHabits] = useState<Habit[]>(cachedHabits || []);
+  const [habitLogs, setHabitLogs] = useState<HabitLog[]>(cachedHabitLogs || []);
+  const [loading, setLoading] = useState(!cachedLogs);
   const [selectedDateStr, setSelectedDateStr] = useState<string | null>(null);
   const [hoveredDateStr, setHoveredDateStr] = useState<string | null>(null);
 
@@ -579,7 +593,9 @@ export function YearInPixels() {
 
   // Fetch all logs and habits for the selected year
   const fetchYearLogs = useCallback(async () => {
-    setLoading(true);
+    if (!cachedLogs) {
+      setLoading(true);
+    }
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       setLoading(false);
@@ -610,8 +626,11 @@ export function YearInPixels() {
       if (habitLogsRes.error) throw habitLogsRes.error;
 
       setLogs(moodRes.data || []);
+      cachedLogs = moodRes.data;
       setHabits(habitsRes.data || []);
+      cachedHabits = habitsRes.data;
       setHabitLogs(habitLogsRes.data || []);
+      cachedHabitLogs = habitLogsRes.data;
     } catch (err) {
       console.error('Error fetching yearly logs:', err);
     } finally {
@@ -828,11 +847,12 @@ export function YearInPixels() {
     <Container>
       <MainContent>
         {/* Header Section */}
-        <HeaderRow>
-          <PageTitle>
-            <Calendar size={22} style={{ color: '#aaa' }} />
-            Year in Pixels
-          </PageTitle>
+        <DashboardHeader>
+          <div>
+            <HeaderTitle>
+              Year <span>in Pixels</span>
+            </HeaderTitle>
+          </div>
           <YearControls>
             <YearButton onClick={handlePrevYear} aria-label="Previous Year">
               <ChevronLeft size={18} />
@@ -842,7 +862,7 @@ export function YearInPixels() {
               <ChevronRight size={18} />
             </YearButton>
           </YearControls>
-        </HeaderRow>
+        </DashboardHeader>
 
         {loading ? (
           <div style={{ color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.12em', padding: '3rem', textAlign: 'center' }}>

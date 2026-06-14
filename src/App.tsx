@@ -1,14 +1,14 @@
-import { lazy, Suspense } from 'react';
+import { Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthGuard } from './components/AuthGuard';
 import { AppHeader } from './components/AppHeader';
 import { FullScreenSpinner } from './components/common';
 import styled from 'styled-components';
 
-const Login = lazy(() => import('./pages/Login').then(m => ({ default: m.Login })));
-const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
-const YearInPixels = lazy(() => import('./pages/YearInPixels').then(m => ({ default: m.YearInPixels })));
-const Habits = lazy(() => import('./pages/Habits').then(m => ({ default: m.Habits })));
+import { Login } from './pages/Login';
+import { Dashboard } from './pages/Dashboard';
+import { YearInPixels } from './pages/YearInPixels';
+import { Habits } from './pages/Habits';
 
 const AppShell = styled.div`
   display: flex;
