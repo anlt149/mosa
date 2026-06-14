@@ -9,7 +9,6 @@ const Login = lazy(() => import('./pages/Login').then(m => ({ default: m.Login }
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
 const YearInPixels = lazy(() => import('./pages/YearInPixels').then(m => ({ default: m.YearInPixels })));
 const Habits = lazy(() => import('./pages/Habits').then(m => ({ default: m.Habits })));
-const Home = lazy(() => import('./pages/Home').then(m => ({ default: m.Home })));
 
 const AppShell = styled.div`
   display: flex;
@@ -29,29 +28,7 @@ function App() {
               <AuthGuard>
                 <AppShell>
                   <AppHeader />
-                  <Home />
-                </AppShell>
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/journal"
-            element={
-              <AuthGuard>
-                <AppShell>
-                  <AppHeader />
                   <Dashboard />
-                </AppShell>
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/year"
-            element={
-              <AuthGuard>
-                <AppShell>
-                  <AppHeader />
-                  <YearInPixels />
                 </AppShell>
               </AuthGuard>
             }
@@ -63,6 +40,17 @@ function App() {
                 <AppShell>
                   <AppHeader />
                   <Habits />
+                </AppShell>
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/year"
+            element={
+              <AuthGuard>
+                <AppShell>
+                  <AppHeader />
+                  <YearInPixels />
                 </AppShell>
               </AuthGuard>
             }

@@ -33,6 +33,110 @@ const PageLayout = styled.div`
   }
 `;
 
+const YearlyHabitsSection = styled.div`
+  margin-top: 3rem;
+  border-top: 1px solid #222;
+  padding-top: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+`;
+
+const SectionTitleHeader = styled.h2`
+  font-size: 1.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #fff;
+  margin: 0 0 0.5rem 0;
+`;
+
+const HabitYearCard = styled.div<{ $color: string }>`
+  background: #0b0b0b;
+  border: 1px solid #1a1a1a;
+  padding: 1.25rem;
+`;
+
+const HabitYearHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+`;
+
+const HabitYearTitle = styled.h3`
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const ColorIndicator = styled.div<{ $color: string }>`
+  width: 8px;
+  height: 8px;
+  background: ${props => props.$color};
+`;
+
+const YearStats = styled.span`
+  font-size: 0.7rem;
+  color: #666;
+`;
+
+const MonthsRow = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+
+  @media (min-width: 640px) {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  @media (min-width: 1024px) {
+    grid-template-columns: repeat(6, 1fr);
+  }
+`;
+
+const MonthBox = styled.div`
+  background: #000;
+  border: 1px solid #111;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+`;
+
+const MonthLabel = styled.span`
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  color: #555;
+  letter-spacing: 0.05em;
+  font-weight: bold;
+`;
+
+const DaysPixelGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+`;
+
+const PixelCell = styled.div<{ $color: string; $checked: boolean; $isToday?: boolean }>`
+  aspect-ratio: 1;
+  background: ${props => props.$checked ? props.$color : '#0c0c0c'};
+  border: 1px solid ${props => props.$isToday ? '#10b981' : 'transparent'};
+  font-size: 0.5rem;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    transform: scale(1.15);
+    background: ${props => props.$checked ? props.$color : '#222'};
+  }
+`;
+
 const HeaderRow = styled.div`
   display: flex;
   justify-content: space-between;
@@ -441,15 +545,39 @@ const getDaysInMonth = (year: number, month: number) => {
 
 /* ── Main Component ─────────────────────────────────────────── */
 
+interface Habit {
+  id: string;
+  name: string;
+  color: string;
+}
+
+interface HabitLog {
+  id: string;
+  habit_id: string;
+  log_date: string;
+}
+
 export function YearInPixels() {
   const navigate = useNavigate();
   const [selectedYear, setSelectedYear] = useState<number>(() => new Date().getFullYear());
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [habits, setHabits] = useState<Habit[]>([]);
+  const [habitLogs, setHabitLogs] = useState<HabitLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDateStr, setSelectedDateStr] = useState<string | null>(null);
   const [hoveredDateStr, setHoveredDateStr] = useState<string | null>(null);
 
-  // Fetch all logs for the selected year
+  // Helper to format date in YYYY-MM-DD local format
+  const getLocalDateString = useCallback((d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }, []);
+
+  const todayStr = useMemo(() => getLocalDateString(new Date()), [getLocalDateString]);
+
+  // Fetch all logs and habits for the selected year
   const fetchYearLogs = useCallback(async () => {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
@@ -458,19 +586,37 @@ export function YearInPixels() {
       return;
     }
 
-    const { data, error } = await supabase
-      .from('daily_logs')
-      .select('id, log_date, mood_score, energy_level, note')
-      .gte('log_date', `${selectedYear}-01-01`)
-      .lte('log_date', `${selectedYear}-12-31`)
-      .order('log_date', { ascending: true });
+    try {
+      const [moodRes, habitsRes, habitLogsRes] = await Promise.all([
+        supabase
+          .from('daily_logs')
+          .select('id, log_date, mood_score, energy_level, note')
+          .gte('log_date', `${selectedYear}-01-01`)
+          .lte('log_date', `${selectedYear}-12-31`)
+          .order('log_date', { ascending: true }),
+        supabase
+          .from('habits')
+          .select('*')
+          .order('created_at', { ascending: true }),
+        supabase
+          .from('habit_logs')
+          .select('id, habit_id, log_date')
+          .gte('log_date', `${selectedYear}-01-01`)
+          .lte('log_date', `${selectedYear}-12-31`)
+      ]);
 
-    if (error) {
-      console.error('Error fetching logs for year:', error);
-    } else if (data) {
-      setLogs(data as LogEntry[]);
+      if (moodRes.error) throw moodRes.error;
+      if (habitsRes.error) throw habitsRes.error;
+      if (habitLogsRes.error) throw habitLogsRes.error;
+
+      setLogs(moodRes.data || []);
+      setHabits(habitsRes.data || []);
+      setHabitLogs(habitLogsRes.data || []);
+    } catch (err) {
+      console.error('Error fetching yearly logs:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, [selectedYear]);
 
   useEffect(() => {
@@ -498,6 +644,86 @@ export function YearInPixels() {
   // Handle year transitions
   const handlePrevYear = () => setSelectedYear(y => y - 1);
   const handleNextYear = () => setSelectedYear(y => y + 1);
+
+  // Toggle habit check-in log
+  const handleToggleHabitLog = async (habitId: string, dateStr: string) => {
+    const existingLog = habitLogs.find(l => l.habit_id === habitId && l.log_date === dateStr);
+
+    if (existingLog) {
+      // Optimistic Update
+      setHabitLogs(habitLogs.filter(l => l.id !== existingLog.id));
+
+      try {
+        const { error } = await supabase
+          .from('habit_logs')
+          .delete()
+          .eq('id', existingLog.id);
+
+        if (error) {
+          setHabitLogs([...habitLogs, existingLog]);
+          throw error;
+        }
+      } catch (err) {
+        console.error('Error deleting habit log:', err);
+        fetchYearLogs(); // Reset
+      }
+    } else {
+      const tempId = crypto.randomUUID();
+      const newLog = { id: tempId, habit_id: habitId, log_date: dateStr };
+      // Optimistic Update
+      setHabitLogs([...habitLogs, newLog]);
+
+      try {
+        const { data, error } = await supabase
+          .from('habit_logs')
+          .insert({
+            habit_id: habitId,
+            log_date: dateStr,
+          })
+          .select();
+
+        if (error) throw error;
+        if (data) {
+          setHabitLogs(prev => prev.map(l => l.id === tempId ? data[0] : l));
+        }
+      } catch (err) {
+        console.error('Error creating habit log:', err);
+        setHabitLogs(prev => prev.filter(l => l.id !== tempId));
+        fetchYearLogs(); // Reset
+      }
+    }
+  };
+
+  const yearlyMonths = useMemo(() => {
+    const months = [];
+    const monthNames = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+
+    for (let m = 0; m < 12; m++) {
+      const daysCount = new Date(selectedYear, m + 1, 0).getDate();
+      const days = Array.from({ length: daysCount }, (_, i) => {
+        const date = new Date(selectedYear, m, i + 1);
+        const dateStr = getLocalDateString(date);
+        return {
+          dayNum: i + 1,
+          dateStr,
+          isToday: dateStr === todayStr,
+        };
+      });
+      months.push({ name: monthNames[m], index: m, days });
+    }
+    return months;
+  }, [selectedYear, todayStr, getLocalDateString]);
+
+  const habitLogsMap = useMemo(() => {
+    const map: Record<string, boolean> = {};
+    habitLogs.forEach(l => {
+      map[`${l.habit_id}_${l.log_date}`] = true;
+    });
+    return map;
+  }, [habitLogs]);
 
   // Statistics calculations
   const stats = useMemo(() => {
@@ -913,6 +1139,51 @@ export function YearInPixels() {
                 )}
               </SidePanel>
             </PageLayout>
+
+            {/* Yearly Habits Dashboard */}
+            {habits.length > 0 && (
+              <YearlyHabitsSection>
+                <SectionTitleHeader>Yearly Habits Reflection</SectionTitleHeader>
+                {habits.map(h => {
+                  const totalLogsThisYear = habitLogs.filter(l => l.habit_id === h.id).length;
+                  return (
+                    <HabitYearCard key={h.id} $color={h.color}>
+                      <HabitYearHeader>
+                        <HabitYearTitle>
+                          <ColorIndicator $color={h.color} />
+                          {h.name}
+                        </HabitYearTitle>
+                        <YearStats>
+                          {totalLogsThisYear} check-ins in {selectedYear}
+                        </YearStats>
+                      </HabitYearHeader>
+                      <MonthsRow>
+                        {yearlyMonths.map(m => (
+                          <MonthBox key={m.name}>
+                            <MonthLabel>{m.name}</MonthLabel>
+                            <DaysPixelGrid>
+                              {m.days.map(d => {
+                                const isChecked = !!habitLogsMap[`${h.id}_${d.dateStr}`];
+                                return (
+                                  <PixelCell
+                                    key={d.dayNum}
+                                    $color={h.color}
+                                    $checked={isChecked}
+                                    $isToday={d.isToday}
+                                    onClick={() => handleToggleHabitLog(h.id, d.dateStr)}
+                                    title={`${h.name}: ${d.dateStr}`}
+                                  />
+                                );
+                              })}
+                            </DaysPixelGrid>
+                          </MonthBox>
+                        ))}
+                      </MonthsRow>
+                    </HabitYearCard>
+                  );
+                })}
+              </YearlyHabitsSection>
+            )}
           </>
         )}
       </MainContent>

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
-import { LayoutGrid, BookOpen, LogOut, Home, CheckSquare } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 
 /* ── Animations ────────────────────────────────────────────── */
 
@@ -26,6 +26,45 @@ const Bar = styled.header`
   padding: 0 1.25rem;
   height: 52px;
   box-sizing: border-box;
+`;
+
+const NavTabs = styled.nav`
+  display: flex;
+  gap: 0.25rem;
+  margin-left: 1.5rem;
+  height: 100%;
+  align-items: center;
+
+  @media (max-width: 480px) {
+    margin-left: 0.5rem;
+    gap: 0.1rem;
+  }
+`;
+
+const NavTabButton = styled.button<{ $active: boolean }>`
+  background: none;
+  border: none;
+  border-bottom: 2px solid ${props => props.$active ? '#10b981' : 'transparent'};
+  color: ${props => props.$active ? '#fff' : '#777'};
+  height: 52px;
+  padding: 0 0.8rem;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-sizing: border-box;
+
+  &:hover {
+    color: #fff;
+  }
+
+  @media (max-width: 480px) {
+    font-size: 0.7rem;
+    padding: 0 0.4rem;
+  }
 `;
 
 const Brand = styled.div`
@@ -167,8 +206,8 @@ export function AppHeader({ onLogout }: AppHeaderProps) {
 
   return (
     <Bar>
-      {/* Logo + wordmark */}
-      <Brand style={{ cursor: 'pointer' }} onClick={() => handleNavigate('/')}>
+      <div style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
+        <Brand style={{ cursor: 'pointer' }} onClick={() => handleNavigate('/')}>
         <BrandLogo
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 32 32"
@@ -205,6 +244,27 @@ export function AppHeader({ onLogout }: AppHeaderProps) {
         </BrandLogo>
         <BrandName>mosa</BrandName>
       </Brand>
+      <NavTabs>
+        <NavTabButton
+          $active={location.pathname === '/' || location.pathname === '/journal'}
+          onClick={() => handleNavigate('/')}
+        >
+          Mood
+        </NavTabButton>
+        <NavTabButton
+          $active={location.pathname === '/habits'}
+          onClick={() => handleNavigate('/habits')}
+        >
+          Habits
+        </NavTabButton>
+        <NavTabButton
+          $active={location.pathname === '/year'}
+          onClick={() => handleNavigate('/year')}
+        >
+          Year
+        </NavTabButton>
+      </NavTabs>
+    </div>
 
       {/* Hamburger menu */}
       <div ref={ref} style={{ position: 'relative' }}>
@@ -220,23 +280,6 @@ export function AppHeader({ onLogout }: AppHeaderProps) {
 
         {open && (
           <Dropdown>
-            <DropdownItem onClick={() => handleNavigate('/')} $active={location.pathname === '/'}>
-              <Home size={14} />
-              Home
-            </DropdownItem>
-            <DropdownItem onClick={() => handleNavigate('/journal')} $active={location.pathname === '/journal'}>
-              <BookOpen size={14} />
-              Journal
-            </DropdownItem>
-            <DropdownItem onClick={() => handleNavigate('/year')} $active={location.pathname === '/year'}>
-              <LayoutGrid size={14} />
-              Year in Pixels
-            </DropdownItem>
-            <DropdownItem onClick={() => handleNavigate('/habits')} $active={location.pathname === '/habits'}>
-              <CheckSquare size={14} />
-              Habits
-            </DropdownItem>
-            <DropdownDivider />
             <DropdownItem onClick={handleLogout}>
               <LogOut size={14} />
               Logout
