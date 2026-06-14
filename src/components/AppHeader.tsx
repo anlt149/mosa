@@ -26,6 +26,10 @@ const Bar = styled.header`
   padding: 0 1.25rem;
   height: 52px;
   box-sizing: border-box;
+
+  @media (max-width: 480px) {
+    padding: 0 0.5rem;
+  }
 `;
 
 const NavTabs = styled.nav`
@@ -34,10 +38,11 @@ const NavTabs = styled.nav`
   margin-left: 1.5rem;
   height: 100%;
   align-items: center;
+  flex-shrink: 0;
 
   @media (max-width: 480px) {
     margin-left: 0.5rem;
-    gap: 0.1rem;
+    gap: 0.05rem;
   }
 `;
 
@@ -56,14 +61,15 @@ const NavTabButton = styled.button<{ $active: boolean }>`
   cursor: pointer;
   transition: all 0.2s;
   box-sizing: border-box;
+  white-space: nowrap;
 
   &:hover {
     color: #fff;
   }
 
   @media (max-width: 480px) {
-    font-size: 0.7rem;
-    padding: 0 0.4rem;
+    font-size: 0.75rem;
+    padding: 0 0.35rem;
   }
 `;
 
@@ -73,6 +79,7 @@ const Brand = styled.div`
   gap: 0.6rem;
   text-decoration: none;
   user-select: none;
+  flex-shrink: 0;
 `;
 
 const BrandLogo = styled.svg`
