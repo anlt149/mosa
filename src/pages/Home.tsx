@@ -3,7 +3,7 @@ import styled, { keyframes } from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { Container, MainContent } from '../components/common';
-import { BookOpen, LayoutGrid, ArrowRight, Activity, Zap, Smile } from 'lucide-react';
+import { BookOpen, LayoutGrid, ArrowRight, Activity, Zap, Smile, CheckSquare } from 'lucide-react';
 
 /* ── Animations ────────────────────────────────────────────── */
 
@@ -344,6 +344,25 @@ export function Home() {
             </CardTop>
             <CardAction>
               Open Yearly Canvas
+              <ArrowRight size={14} className="action-arrow" />
+            </CardAction>
+          </FeatureCard>
+
+          <FeatureCard 
+            $glowColor="#8b5cf6" 
+            onClick={() => navigate('/habits')}
+          >
+            <CardTop>
+              <IconContainer $color="#8b5cf6">
+                <CheckSquare size={24} />
+              </IconContainer>
+              <CardTitle>Habit Tracker</CardTitle>
+              <CardDescription>
+                Track multiple daily habits with custom colors. Check in daily and monitor progress in a monthly matrix or yearly pixels dashboard.
+              </CardDescription>
+            </CardTop>
+            <CardAction>
+              Open Habit Tracker
               <ArrowRight size={14} className="action-arrow" />
             </CardAction>
           </FeatureCard>

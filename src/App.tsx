@@ -4,6 +4,7 @@ import { AppHeader } from './components/AppHeader';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { YearInPixels } from './pages/YearInPixels';
+import { Habits } from './pages/Habits';
 import { Home } from './pages/Home';
 import styled from 'styled-components';
 
@@ -47,6 +48,17 @@ function App() {
               <AppShell>
                 <AppHeader />
                 <YearInPixels />
+              </AppShell>
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/habits"
+          element={
+            <AuthGuard>
+              <AppShell>
+                <AppHeader />
+                <Habits />
               </AppShell>
             </AuthGuard>
           }

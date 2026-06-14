@@ -369,9 +369,17 @@ export function Dashboard() {
 
   // Sync state with URL parameter if it changes
   useEffect(() => {
-    if (urlDate) {
-      setSelectedDate(urlDate);
-    }
+    let ignore = false;
+    const run = async () => {
+      await Promise.resolve();
+      if (!ignore && urlDate) {
+        setSelectedDate(urlDate);
+      }
+    };
+    run();
+    return () => {
+      ignore = true;
+    };
   }, [urlDate]);
 
   const today = new Date().toISOString().split('T')[0];

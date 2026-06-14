@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
-import { LayoutGrid, BookOpen, LogOut, Home } from 'lucide-react';
+import { LayoutGrid, BookOpen, LogOut, Home, CheckSquare } from 'lucide-react';
 
 /* ── Animations ────────────────────────────────────────────── */
 
@@ -231,6 +231,10 @@ export function AppHeader({ onLogout }: AppHeaderProps) {
             <DropdownItem onClick={() => handleNavigate('/year')} $active={location.pathname === '/year'}>
               <LayoutGrid size={14} />
               Year in Pixels
+            </DropdownItem>
+            <DropdownItem onClick={() => handleNavigate('/habits')} $active={location.pathname === '/habits'}>
+              <CheckSquare size={14} />
+              Habits
             </DropdownItem>
             <DropdownDivider />
             <DropdownItem onClick={handleLogout}>

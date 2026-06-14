@@ -474,7 +474,17 @@ export function YearInPixels() {
   }, [selectedYear]);
 
   useEffect(() => {
-    fetchYearLogs();
+    let ignore = false;
+    const run = async () => {
+      await Promise.resolve();
+      if (!ignore) {
+        fetchYearLogs();
+      }
+    };
+    run();
+    return () => {
+      ignore = true;
+    };
   }, [fetchYearLogs]);
 
   // Index logs by date YYYY-MM-DD for O(1) lookup
