@@ -1,12 +1,15 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthGuard } from './components/AuthGuard';
 import { AppHeader } from './components/AppHeader';
-import { Login } from './pages/Login';
-import { Dashboard } from './pages/Dashboard';
-import { YearInPixels } from './pages/YearInPixels';
-import { Habits } from './pages/Habits';
-import { Home } from './pages/Home';
+import { FullScreenSpinner } from './components/common';
 import styled from 'styled-components';
+
+const Login = lazy(() => import('./pages/Login').then(m => ({ default: m.Login })));
+const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
+const YearInPixels = lazy(() => import('./pages/YearInPixels').then(m => ({ default: m.YearInPixels })));
+const Habits = lazy(() => import('./pages/Habits').then(m => ({ default: m.Habits })));
+const Home = lazy(() => import('./pages/Home').then(m => ({ default: m.Home })));
 
 const AppShell = styled.div`
   display: flex;
@@ -17,53 +20,55 @@ const AppShell = styled.div`
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route
-          path="/"
-          element={
-            <AuthGuard>
-              <AppShell>
-                <AppHeader />
-                <Home />
-              </AppShell>
-            </AuthGuard>
-          }
-        />
-        <Route
-          path="/journal"
-          element={
-            <AuthGuard>
-              <AppShell>
-                <AppHeader />
-                <Dashboard />
-              </AppShell>
-            </AuthGuard>
-          }
-        />
-        <Route
-          path="/year"
-          element={
-            <AuthGuard>
-              <AppShell>
-                <AppHeader />
-                <YearInPixels />
-              </AppShell>
-            </AuthGuard>
-          }
-        />
-        <Route
-          path="/habits"
-          element={
-            <AuthGuard>
-              <AppShell>
-                <AppHeader />
-                <Habits />
-              </AppShell>
-            </AuthGuard>
-          }
-        />
-      </Routes>
+      <Suspense fallback={<FullScreenSpinner />}>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route
+            path="/"
+            element={
+              <AuthGuard>
+                <AppShell>
+                  <AppHeader />
+                  <Home />
+                </AppShell>
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/journal"
+            element={
+              <AuthGuard>
+                <AppShell>
+                  <AppHeader />
+                  <Dashboard />
+                </AppShell>
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/year"
+            element={
+              <AuthGuard>
+                <AppShell>
+                  <AppHeader />
+                  <YearInPixels />
+                </AppShell>
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/habits"
+            element={
+              <AuthGuard>
+                <AppShell>
+                  <AppHeader />
+                  <Habits />
+                </AppShell>
+              </AuthGuard>
+            }
+          />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { supabase } from '../lib/supabaseClient';
-import { Container, MainContent } from '../components/common';
-import { Plus, ChevronLeft, ChevronRight, Check, Calendar, Activity, RefreshCw, Trash2 } from 'lucide-react';
+import { Container, MainContent, LoadingSpinner } from '../components/common';
+import { Plus, ChevronLeft, ChevronRight, Check, Calendar, Activity, Trash2 } from 'lucide-react';
 
 /* ── Animations ────────────────────────────────────────────── */
 const fadeIn = keyframes`
@@ -434,6 +434,7 @@ export function Habits() {
   const [habits, setHabits] = useState<Habit[]>([]);
   const [logs, setLogs] = useState<HabitLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
 
   // Form State
   const [name, setName] = useState('');
@@ -542,6 +543,7 @@ export function Habits() {
       if (data) {
         setHabits([...habits, data[0]]);
         setName('');
+        setShowForm(false);
       }
     } catch (err) {
       console.error('Error creating habit:', err);
@@ -705,39 +707,58 @@ export function Habits() {
         <GridContainer>
           {/* Left panel: Creator & Habit List */}
           <Panel>
-            <PanelTitle>Create Habit</PanelTitle>
-            <Form onSubmit={handleCreateHabit}>
-              <FormGroup>
-                <Label htmlFor="habit-name">Name</Label>
-                <Input
-                  id="habit-name"
-                  type="text"
-                  placeholder="e.g. Drink Water"
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  maxLength={50}
-                  required
-                />
-              </FormGroup>
-              <FormGroup>
-                <Label>Color Preset</Label>
-                <ColorGrid>
-                  {PRESET_COLORS.map(c => (
-                    <ColorBubble
-                      key={c}
-                      type="button"
-                      $color={c}
-                      $selected={color === c}
-                      onClick={() => setColor(c)}
-                    />
-                  ))}
-                </ColorGrid>
-              </FormGroup>
-              <SubmitButton type="submit" disabled={saving || !name.trim()}>
+            {!showForm ? (
+              <SubmitButton type="button" onClick={() => setShowForm(true)}>
                 <Plus size={16} />
                 Add Habit
               </SubmitButton>
-            </Form>
+            ) : (
+              <>
+                <PanelTitle>Create Habit</PanelTitle>
+                <Form onSubmit={handleCreateHabit}>
+                  <FormGroup>
+                    <Label htmlFor="habit-name">Name</Label>
+                    <Input
+                      id="habit-name"
+                      type="text"
+                      placeholder="e.g. Drink Water"
+                      value={name}
+                      onChange={e => setName(e.target.value)}
+                      maxLength={50}
+                      required
+                    />
+                  </FormGroup>
+                  <FormGroup>
+                    <Label>Color Preset</Label>
+                    <ColorGrid>
+                      {PRESET_COLORS.map(c => (
+                        <ColorBubble
+                          key={c}
+                          type="button"
+                          $color={c}
+                          $selected={color === c}
+                          onClick={() => setColor(c)}
+                        />
+                      ))}
+                    </ColorGrid>
+                  </FormGroup>
+                  <SubmitButton type="submit" disabled={saving || !name.trim()}>
+                    <Plus size={16} />
+                    Add Habit
+                  </SubmitButton>
+                  <SubmitButton
+                    type="button"
+                    style={{ background: 'transparent', color: '#888', borderColor: '#222' }}
+                    onClick={() => {
+                      setShowForm(false);
+                      setName('');
+                    }}
+                  >
+                    Cancel
+                  </SubmitButton>
+                </Form>
+              </>
+            )}
 
             <PanelTitle style={{ marginTop: '1rem' }}>Your Habits</PanelTitle>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -775,9 +796,7 @@ export function Habits() {
                 </CalendarControl>
 
                 {loading ? (
-                  <div style={{ padding: '4rem', display: 'flex', justifyContent: 'center', color: '#555' }}>
-                    <RefreshCw className="animate-spin" size={24} />
-                  </div>
+                  <LoadingSpinner />
                 ) : habits.length === 0 ? (
                   <div style={{ border: '1px dashed #222', padding: '4rem', textAlign: 'center', color: '#666' }}>
                     <Calendar size={32} style={{ margin: '0 auto 1rem', color: '#333' }} />
@@ -841,9 +860,7 @@ export function Habits() {
                 </CalendarControl>
 
                 {loading ? (
-                  <div style={{ padding: '4rem', display: 'flex', justifyContent: 'center', color: '#555' }}>
-                    <RefreshCw className="animate-spin" size={24} />
-                  </div>
+                  <LoadingSpinner />
                 ) : habits.length === 0 ? (
                   <div style={{ border: '1px dashed #222', padding: '4rem', textAlign: 'center', color: '#666' }}>
                     <Activity size={32} style={{ margin: '0 auto 1rem', color: '#333' }} />
