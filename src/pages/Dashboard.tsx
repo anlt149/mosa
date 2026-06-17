@@ -2,9 +2,11 @@ import styled, { keyframes } from 'styled-components';
 import { supabase } from '../lib/supabaseClient';
 import { Container, Card, CardTitle, MainContent, TextArea } from '../components/common';
 import { ActivityHeatmap } from '../components/ActivityHeatmap';
-import { useState, useEffect, useCallback } from 'react';
+import { WeeklyTrend } from '../components/WeeklyTrend';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useVimNavigation } from '../hooks/useVimNavigation';
 import { useSearchParams } from 'react-router-dom';
+import { AlertTriangle } from 'lucide-react';
 
 /* ── Animations ──────────────────────────────────────────────── */
 const fadeIn = keyframes`
@@ -273,6 +275,19 @@ const Toast = styled.div<{ $type: 'success' | 'error' }>`
   }
 `;
 
+const MissedDaysAlert = styled.div`
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid #ef4444;
+  color: #fca5a5;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+  line-height: 1.4;
+`;
+
 const ModalOverlay = styled.div`
   position: fixed;
   top: 0;
@@ -417,6 +432,28 @@ export function Dashboard() {
   const isPastDay = !!(selectedDate && selectedDate !== today);
   const activeDate = selectedDate || today;
   const selectedLog = logs.find(l => l.log_date === activeDate);
+
+  const missedDaysThisWeek = useMemo(() => {
+    const missed = [];
+    const current = new Date();
+    const dayOfWeek = current.getDay();
+    const daysSinceMonday = (dayOfWeek + 6) % 7; 
+    
+    for (let i = daysSinceMonday; i > 0; i--) {
+      const d = new Date();
+      d.setDate(current.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      if (!logs.some(l => l.log_date === dateStr)) {
+        missed.push(d.toLocaleDateString('en-US', { weekday: 'long' }));
+      }
+    }
+    return missed;
+  }, [logs]);
+
+  const yesterdayObj = new Date();
+  yesterdayObj.setDate(new Date().getDate() - 1);
+  const yesterdayStr = yesterdayObj.toISOString().split('T')[0];
+  const yesterdayLog = logs.find(l => l.log_date === yesterdayStr);
 
   const showToast = useCallback((text: string, type: 'success' | 'error') => {
     const id = Date.now();
@@ -569,6 +606,15 @@ export function Dashboard() {
     setActiveSection('mood');
   };
 
+  const handleSameAsYesterday = () => {
+    if (yesterdayLog) {
+      setMood(yesterdayLog.mood_score);
+      setEnergy(yesterdayLog.energy_level);
+      setNote(yesterdayLog.note || '');
+      showToast('Copied from yesterday', 'success');
+    }
+  };
+
   /* ── Render ────────────────────────────────────────────────── */
 
   const recentNotes = logs
@@ -596,6 +642,11 @@ export function Dashboard() {
                 onSelectDate={handleDateSelect}
                 selectedDate={selectedDate}
               />
+            </Card>
+
+            {/* Weekly Trend */}
+            <Card>
+              <WeeklyTrend logs={logs} />
             </Card>
 
             {/* Recent Notes */}
@@ -631,10 +682,27 @@ export function Dashboard() {
 
           {/* ── Details / Data Entry (right/bottom) ── */}
           <Card>
+            {missedDaysThisWeek.length > 0 && (
+              <MissedDaysAlert>
+                <AlertTriangle size={20} />
+                <div>
+                  <strong>Forgot to log?</strong> You missed logging your mood for: {missedDaysThisWeek.join(', ')}.
+                </div>
+              </MissedDaysAlert>
+            )}
             <FormHeader>
               <CardTitle style={{ borderBottom: 'none', paddingBottom: 0, marginBottom: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', minWidth: 0 }}>
                 {!isPastDay ? `Today — ${today}` : `Entry — ${selectedDate}`}
               </CardTitle>
+              {activeDate === today && (
+                <SecondaryButton 
+                  onClick={handleSameAsYesterday}
+                  disabled={!yesterdayLog}
+                  style={{ width: 'auto', padding: '0.4rem 0.8rem', fontSize: '0.75rem', opacity: yesterdayLog ? 1 : 0.4 }}
+                >
+                  Same as Yesterday
+                </SecondaryButton>
+              )}
             </FormHeader>
 
             <ViewSection>
