@@ -199,6 +199,10 @@ const ViewSection = styled.div`
 const ActionRow = styled.div`
   display: flex;
   gap: 0.75rem;
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+  }
 `;
 
 const SecondaryButton = styled.button`

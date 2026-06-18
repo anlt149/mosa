@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { supabase } from '../lib/supabaseClient';
-import { Container, MainContent, LoadingSpinner } from '../components/common';
-import { Plus, ChevronLeft, ChevronRight, Check, Calendar, Activity, Trash2 } from 'lucide-react';
+import { Container, MainContent, Card, CardTitle } from '../components/common';
+import { Plus, Trash2, Check } from 'lucide-react';
+import { HabitHeatmap, HabitLog } from '../components/HabitHeatmap';
+import { useSearchParams } from 'react-router-dom';
 
 /* ── Animations ────────────────────────────────────────────── */
 const fadeIn = keyframes`
@@ -11,6 +13,18 @@ const fadeIn = keyframes`
 `;
 
 /* ── Styled Components ─────────────────────────────────────── */
+const PageLayout = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  width: 100%;
+
+  @media (min-width: 992px) {
+    grid-template-columns: 1.2fr 1fr;
+    align-items: start;
+  }
+`;
+
 const DashboardHeader = styled.div`
   display: flex;
   flex-direction: column;
@@ -39,63 +53,21 @@ const HeaderTitle = styled.h1`
   }
 `;
 
-const ViewToggleContainer = styled.div`
+const FormHeader = styled.div`
   display: flex;
-  background: #111;
-  border: 1px solid #222;
-  padding: 2px;
-  margin-top: 0.5rem;
-
-  @media (min-width: 768px) {
-    margin-top: 0;
-  }
+  align-items: center;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #222;
+  overflow: hidden;
+  width: 100%;
+  min-width: 0;
 `;
 
-const ViewToggleButton = styled.button<{ $active: boolean }>`
-  background: ${props => props.$active ? '#222' : 'none'};
-  border: none;
-  color: ${props => props.$active ? '#fff' : '#888'};
-  padding: 0.4rem 1rem;
-  font-family: inherit;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover {
-    color: #fff;
-  }
-`;
-
-const GridContainer = styled.div`
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 2rem;
-
-  @media (min-width: 1024px) {
-    grid-template-columns: 280px 1fr;
-  }
-`;
-
-const Panel = styled.div`
-  background: #0b0b0b;
-  border: 1px solid #1a1a1a;
-  padding: 1.5rem;
+const ViewSection = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  animation: ${fadeIn} 0.5s ease-out;
-`;
-
-const PanelTitle = styled.h2`
-  font-size: 0.95rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: #fff;
-  margin: 0;
-  border-bottom: 1px solid #1a1a1a;
-  padding-bottom: 0.75rem;
+  gap: 1.5rem;
+  padding-top: 1rem;
 `;
 
 const Form = styled.form`
@@ -188,11 +160,7 @@ const HabitItem = styled.div<{ $color: string }>`
   background: #000;
   border: 1px solid #111;
   border-left: 3px solid ${props => props.$color};
-`;
-
-const HabitInfo = styled.div`
-  display: flex;
-  flex-direction: column;
+  margin-bottom: 0.5rem;
 `;
 
 const HabitName = styled.span`
@@ -216,246 +184,31 @@ const DeleteButton = styled.button`
   }
 `;
 
-const CalendarControl = styled.div`
+const CheckinItem = styled.div<{ $color: string; $checked: boolean; $isPastDay: boolean }>`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #0b0b0b;
-  border: 1px solid #1a1a1a;
-  padding: 0.75rem 1rem;
-`;
-
-const CalendarNavButton = styled.button`
-  background: none;
-  border: none;
-  color: #888;
+  padding: 1.25rem 1.5rem;
+  background-color: #0b0b0b;
+  border: 2px solid ${props => props.$checked ? props.$color : '#333'};
+  transition: border-color 0.2s ease;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  padding: 0.25rem;
 
   &:hover {
-    color: #fff;
+    border-color: ${props => props.$color};
   }
 `;
 
-const CalendarLabel = styled.span`
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: #fff;
-`;
-
-const TableWrapper = styled.div`
-  width: 100%;
-  overflow-x: auto;
-  background: #0b0b0b;
-  border: 1px solid #1a1a1a;
-`;
-
-const DesktopTableWrapper = styled(TableWrapper)`
-  display: block;
-  @media (max-width: 767px) {
-    display: none;
-  }
-`;
-
-const MobileTableWrapper = styled.div`
-  display: none;
-  background: #0b0b0b;
-  border: 1px solid #1a1a1a;
-  overflow-x: auto;
-  width: 100%;
-
-  @media (max-width: 767px) {
-    display: block;
-  }
-`;
-
-const MobileTable = styled.table`
-  width: 100%;
-  border-collapse: collapse;
-`;
-
-const MobileTh = styled.th`
-  border-bottom: 1px solid #1a1a1a;
-  border-right: 1px solid #111;
-  padding: 0.6rem 0.4rem;
-  font-size: 0.7rem;
-  font-weight: normal;
-  text-transform: uppercase;
-  color: #fff;
-  text-align: center;
-  white-space: normal;
-  word-break: break-word;
-  max-width: 80px;
-`;
-
-const MobileTd = styled.td<{ $isToday?: boolean }>`
-  border-bottom: 1px solid #1a1a1a;
-  border-right: 1px solid #111;
-  padding: 0.5rem 0.4rem;
-  text-align: center;
-  background: ${props => props.$isToday ? '#10b98108' : 'none'};
-`;
-
-const MobileDayLabel = styled.div<{ $isToday?: boolean }>`
-  font-size: 0.75rem;
-  font-weight: ${props => props.$isToday ? 'bold' : 'normal'};
-  color: ${props => props.$isToday ? '#10b981' : '#888'};
-`;
-
-const Table = styled.table`
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 600px;
-`;
-
-const Th = styled.th<{ $isToday?: boolean }>`
-  border-bottom: 1px solid #1a1a1a;
-  border-right: 1px solid #111;
-  padding: 0.5rem;
-  font-size: 0.65rem;
-  font-weight: normal;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: ${props => props.$isToday ? '#10b981' : '#666'};
-  background: ${props => props.$isToday ? '#10b98108' : 'none'};
-  text-align: center;
-`;
-
-const Td = styled.td`
-  border-bottom: 1px solid #1a1a1a;
-  border-right: 1px solid #111;
-  padding: 0.4rem;
-  text-align: center;
-`;
-
-const HabitRowHeader = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.25rem 0.5rem;
-  text-align: left;
-`;
-
-const ColorIndicator = styled.div<{ $color: string }>`
-  width: 8px;
-  height: 8px;
-  background: ${props => props.$color};
-`;
-
-const RowHabitName = styled.span`
-  font-size: 0.8rem;
-  color: #ccc;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  max-width: 130px;
-`;
-
-const CheckSquare = styled.button<{ $color: string; $checked: boolean; $isToday?: boolean }>`
-  width: 24px;
-  height: 24px;
+const CheckSquare = styled.div<{ $color: string; $checked: boolean }>`
+  width: 28px;
+  height: 28px;
   background: ${props => props.$checked ? props.$color : 'transparent'};
-  border: 1px solid ${props => props.$isToday ? '#10b981' : (props.$checked ? props.$color : '#222')};
-  cursor: pointer;
+  border: 2px solid ${props => props.$checked ? props.$color : '#444'};
   display: inline-flex;
   align-items: center;
   justify-content: center;
   color: #000;
   transition: all 0.15s ease;
-
-  &:hover {
-    border-color: ${props => props.$color};
-    box-shadow: 0 0 8px ${props => props.$color}40;
-  }
-`;
-
-const YearGridWrapper = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-`;
-
-const HabitYearCard = styled.div<{ $color: string }>`
-  background: #0b0b0b;
-  border: 1px solid #1a1a1a;
-  padding: 1.25rem;
-`;
-
-const HabitYearHeader = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 1rem;
-`;
-
-const HabitYearTitle = styled.h3`
-  font-size: 0.9rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin: 0;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-`;
-
-const YearStats = styled.span`
-  font-size: 0.7rem;
-  color: #666;
-`;
-
-const MonthsRow = styled.div`
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-
-  @media (min-width: 640px) {
-    grid-template-columns: repeat(4, 1fr);
-  }
-
-  @media (min-width: 1024px) {
-    grid-template-columns: repeat(6, 1fr);
-  }
-`;
-
-const MonthBox = styled.div`
-  background: #000;
-  border: 1px solid #111;
-  padding: 0.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-`;
-
-const MonthLabel = styled.span`
-  font-size: 0.65rem;
-  text-transform: uppercase;
-  color: #555;
-  letter-spacing: 0.05em;
-  font-weight: bold;
-`;
-
-const DaysPixelGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
-`;
-
-const PixelCell = styled.div<{ $color: string; $checked: boolean; $isToday?: boolean }>`
-  aspect-ratio: 1;
-  background: ${props => props.$checked ? props.$color : '#0c0c0c'};
-  border: 1px solid ${props => props.$isToday ? '#10b981' : 'transparent'};
-  font-size: 0.5rem;
-  cursor: pointer;
-  transition: all 0.15s;
-
-  &:hover {
-    transform: scale(1.15);
-    background: ${props => props.$checked ? props.$color : '#222'};
-  }
 `;
 
 interface Habit {
@@ -464,254 +217,128 @@ interface Habit {
   color: string;
 }
 
-interface HabitLog {
-  id: string;
-  habit_id: string;
-  log_date: string;
-}
-
 const PRESET_COLORS = [
-  '#10b981', // Green
-  '#0ea5e9', // Blue
-  '#8b5cf6', // Purple
-  '#ec4899', // Pink
-  '#f43f5e', // Red
-  '#f97316', // Orange
-  '#eab308', // Yellow
-  '#14b8a6', // Teal
+  '#10b981', '#0ea5e9', '#8b5cf6', '#ec4899', 
+  '#f43f5e', '#f97316', '#eab308', '#14b8a6',
 ];
 
-let cachedHabits: Habit[] | null = null;
-let cachedLogs: HabitLog[] | null = null;
-
 export function Habits() {
-  const [view, setView] = useState<'month' | 'year'>('month');
-  const [habits, setHabits] = useState<Habit[]>(cachedHabits || []);
-  const [logs, setLogs] = useState<HabitLog[]>(cachedLogs || []);
-  const [loading, setLoading] = useState(!cachedHabits);
-  const [showForm, setShowForm] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlDate = searchParams.get('date');
 
-  // Form State
+  const [habits, setHabits] = useState<Habit[]>([]);
+  const [logs, setLogs] = useState<HabitLog[]>([]);
+  const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [color, setColor] = useState(PRESET_COLORS[0]);
   const [saving, setSaving] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(urlDate || '');
 
-  // Date Navigation State
-  const [currentDate, setCurrentDate] = useState(new Date());
-
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
-
-  // Helper to format date in YYYY-MM-DD local format
-  const getLocalDateString = useCallback((d: Date) => {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-  }, []);
-
-  const todayStr = useMemo(() => getLocalDateString(new Date()), [getLocalDateString]);
-
-  // Fetch Habits and Logs
-  const fetchData = useCallback(async () => {
-    if (!cachedHabits) {
-      setLoading(true);
-    }
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // 1. Fetch habits
-      const { data: habitsData, error: habitsError } = await supabase
-        .from('habits')
-        .select('*')
-        .order('created_at', { ascending: true });
-
-      if (habitsError) throw habitsError;
-      setHabits(habitsData || []);
-      cachedHabits = habitsData;
-
-      // 2. Fetch logs for current selected context (current month or current year)
-      let startStr = '';
-      let endStr = '';
-
-      if (view === 'month') {
-        const startOfMonth = new Date(year, month, 1);
-        const endOfMonth = new Date(year, month + 1, 0);
-        startStr = getLocalDateString(startOfMonth);
-        endStr = getLocalDateString(endOfMonth);
-      } else {
-        const startOfYear = new Date(year, 0, 1);
-        const endOfYear = new Date(year, 11, 31);
-        startStr = getLocalDateString(startOfYear);
-        endStr = getLocalDateString(endOfYear);
-      }
-
-      const { data: logsData, error: logsError } = await supabase
-        .from('habit_logs')
-        .select('id, habit_id, log_date')
-        .gte('log_date', startStr)
-        .lte('log_date', endStr);
-
-      if (logsError) throw logsError;
-      setLogs(logsData || []);
-      cachedLogs = logsData;
-    } catch (err) {
-      console.error('Error fetching habits data:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [view, year, month, getLocalDateString]);
-
+  // Sync state with URL parameter
   useEffect(() => {
     let ignore = false;
     const run = async () => {
-      // Defer to microtask queue so loading state changes asynchronously
       await Promise.resolve();
-      if (!ignore) {
-        fetchData();
+      if (!ignore && urlDate) {
+        setSelectedDate(urlDate);
       }
     };
     run();
     return () => {
       ignore = true;
     };
+  }, [urlDate]);
+
+  const today = new Date().toISOString().split('T')[0];
+  const isPastDay = !!(selectedDate && selectedDate !== today);
+  const activeDate = selectedDate || today;
+
+  const fetchData = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Fetch habits
+    const { data: habitsData } = await supabase
+      .from('habits')
+      .select('*')
+      .order('created_at', { ascending: true });
+    
+    if (habitsData) setHabits(habitsData);
+
+    // Fetch logs (last 90 days to populate heatmap)
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+    const { data: logsData } = await supabase
+      .from('habit_logs')
+      .select('id, habit_id, log_date')
+      .gte('log_date', ninetyDaysAgo.toISOString().split('T')[0]);
+
+    if (logsData) setLogs(logsData);
+  }, []);
+
+  useEffect(() => {
+    fetchData();
   }, [fetchData]);
 
-  // Handle Habit Creation
   const handleCreateHabit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
     setSaving(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
       const { data, error } = await supabase
         .from('habits')
-        .insert({
-          user_id: user.id,
-          name: name.trim(),
-          color,
-        })
+        .insert({ user_id: user.id, name: name.trim(), color })
         .select();
-
-      if (error) throw error;
-
-      if (data) {
+      
+      if (!error && data) {
         setHabits([...habits, data[0]]);
         setName('');
         setShowForm(false);
       }
-    } catch (err) {
-      console.error('Error creating habit:', err);
-    } finally {
-      setSaving(false);
     }
+    setSaving(false);
   };
 
-  // Handle Habit Deletion
   const handleDeleteHabit = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this habit and all its logged history?')) return;
-
-    try {
-      const { error } = await supabase
-        .from('habits')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+    if (!confirm('Are you sure you want to delete this habit and all its history?')) return;
+    const { error } = await supabase.from('habits').delete().eq('id', id);
+    if (!error) {
       setHabits(habits.filter(h => h.id !== id));
       setLogs(logs.filter(l => l.habit_id !== id));
-    } catch (err) {
-      console.error('Error deleting habit:', err);
     }
   };
 
-  // Toggle log (Check-in)
-  const handleToggleLog = async (habitId: string, dateStr: string) => {
-    const existingLog = logs.find(l => l.habit_id === habitId && l.log_date === dateStr);
+  const handleDateSelect = (dateStr: string) => {
+    setSelectedDate(dateStr);
+    setSearchParams({ date: dateStr });
+  };
+
+  const handleToggleLog = async (habitId: string) => {
+    const existingLog = logs.find(l => l.habit_id === habitId && l.log_date === activeDate);
 
     if (existingLog) {
-      // Optimistic Update
       setLogs(logs.filter(l => l.id !== existingLog.id));
-
-      try {
-        const { error } = await supabase
-          .from('habit_logs')
-          .delete()
-          .eq('id', existingLog.id);
-
-        if (error) {
-          // Rollback on error
-          setLogs([...logs, existingLog]);
-          throw error;
-        }
-      } catch (err) {
-        console.error('Error deleting log:', err);
-        fetchData(); // Reset
-      }
+      const { error } = await supabase.from('habit_logs').delete().eq('id', existingLog.id);
+      if (error) fetchData(); // rollback
     } else {
       const tempId = crypto.randomUUID();
-      const newLog = { id: tempId, habit_id: habitId, log_date: dateStr };
-      // Optimistic Update
+      const newLog = { id: tempId, habit_id: habitId, log_date: activeDate };
       setLogs([...logs, newLog]);
-
-      try {
-        const { data, error } = await supabase
-          .from('habit_logs')
-          .insert({
-            habit_id: habitId,
-            log_date: dateStr,
-          })
-          .select();
-
-        if (error) throw error;
-        if (data) {
-          // Replace temp log with actual DB log
-          setLogs(prev => prev.map(l => l.id === tempId ? data[0] : l));
-        }
-      } catch (err) {
-        console.error('Error creating log:', err);
-        // Rollback
-        setLogs(prev => prev.filter(l => l.id !== tempId));
-        fetchData(); // Reset
+      const { data, error } = await supabase
+        .from('habit_logs')
+        .insert({ habit_id: habitId, log_date: activeDate })
+        .select();
+      
+      if (error) {
+        fetchData(); // rollback
+      } else if (data) {
+        setLogs(prev => prev.map(l => l.id === tempId ? data[0] : l));
       }
     }
   };
 
-  // Month navigation helpers
-  const handlePrevMonth = () => {
-    setCurrentDate(new Date(year, month - 1, 1));
-  };
-
-  const handleNextMonth = () => {
-    setCurrentDate(new Date(year, month + 1, 1));
-  };
-
-  // Year navigation helpers
-  const handlePrevYear = () => {
-    setCurrentDate(new Date(year - 1, month, 1));
-  };
-
-  const handleNextYear = () => {
-    setCurrentDate(new Date(year + 1, month, 1));
-  };
-
-  // Generate days array for the selected month
-  const monthDays = useMemo(() => {
-    const daysCount = new Date(year, month + 1, 0).getDate();
-    return Array.from({ length: daysCount }, (_, i) => {
-      const date = new Date(year, month, i + 1);
-      const dateStr = getLocalDateString(date);
-      const label = String(i + 1);
-      const isToday = dateStr === todayStr;
-      return { day: i + 1, dateStr, label, isToday };
-    });
-  }, [year, month, todayStr, getLocalDateString]);
-
-  // Compute logs map for fast lookup
   const logsMap = useMemo(() => {
     const map: Record<string, boolean> = {};
     logs.forEach(l => {
@@ -719,30 +346,6 @@ export function Habits() {
     });
     return map;
   }, [logs]);
-
-  // Generate calendar structure for all 12 months (for Year View)
-  const yearlyMonths = useMemo(() => {
-    const months = [];
-    const monthNames = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    ];
-
-    for (let m = 0; m < 12; m++) {
-      const daysCount = new Date(year, m + 1, 0).getDate();
-      const days = Array.from({ length: daysCount }, (_, i) => {
-        const date = new Date(year, m, i + 1);
-        const dateStr = getLocalDateString(date);
-        return {
-          dayNum: i + 1,
-          dateStr,
-          isToday: dateStr === todayStr,
-        };
-      });
-      months.push({ name: monthNames[m], index: m, days });
-    }
-    return months;
-  }, [year, todayStr, getLocalDateString]);
 
   return (
     <Container>
@@ -753,28 +356,34 @@ export function Habits() {
               Habit <span>Tracker</span>
             </HeaderTitle>
           </div>
-          <ViewToggleContainer>
-            <ViewToggleButton $active={view === 'month'} onClick={() => setView('month')}>
-              Month
-            </ViewToggleButton>
-            <ViewToggleButton $active={view === 'year'} onClick={() => setView('year')}>
-              Year
-            </ViewToggleButton>
-          </ViewToggleContainer>
         </DashboardHeader>
 
-        <GridContainer>
-          {/* Left panel: Creator & Habit List */}
-          <Panel>
-            {!showForm ? (
-              <SubmitButton type="button" onClick={() => setShowForm(true)}>
-                <Plus size={16} />
-                Add Habit
-              </SubmitButton>
-            ) : (
-              <>
-                <PanelTitle>Create Habit</PanelTitle>
-                <Form onSubmit={handleCreateHabit}>
+        <PageLayout>
+          {/* Left Column Stack */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', width: '100%' }}>
+            {/* Heatmap */}
+            <Card>
+              <HabitHeatmap
+                logs={logs}
+                totalHabits={habits.length}
+                onSelectDate={handleDateSelect}
+                selectedDate={selectedDate}
+              />
+            </Card>
+
+            {/* Manage Habits */}
+            <Card>
+              <CardTitle style={{ borderBottom: '1px solid #222', paddingBottom: '0.75rem', marginBottom: '1rem' }}>
+                Manage Habits
+              </CardTitle>
+              
+              {!showForm ? (
+                <SubmitButton type="button" onClick={() => setShowForm(true)} style={{ marginBottom: '1rem' }}>
+                  <Plus size={16} />
+                  Add Habit
+                </SubmitButton>
+              ) : (
+                <Form onSubmit={handleCreateHabit} style={{ marginBottom: '1rem', padding: '1rem', border: '1px solid #333' }}>
                   <FormGroup>
                     <Label htmlFor="habit-name">Name</Label>
                     <Input
@@ -801,225 +410,75 @@ export function Habits() {
                       ))}
                     </ColorGrid>
                   </FormGroup>
-                  <SubmitButton type="submit" disabled={saving || !name.trim()}>
-                    <Plus size={16} />
-                    Add Habit
-                  </SubmitButton>
-                  <SubmitButton
-                    type="button"
-                    style={{ background: 'transparent', color: '#888', borderColor: '#222' }}
-                    onClick={() => {
-                      setShowForm(false);
-                      setName('');
-                    }}
-                  >
-                    Cancel
-                  </SubmitButton>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                    <SubmitButton type="submit" disabled={saving || !name.trim()} style={{ flex: 1 }}>
+                      Save
+                    </SubmitButton>
+                    <SubmitButton
+                      type="button"
+                      style={{ flex: 1, background: 'transparent', color: '#888', borderColor: '#222' }}
+                      onClick={() => { setShowForm(false); setName(''); }}
+                    >
+                      Cancel
+                    </SubmitButton>
+                  </div>
                 </Form>
-              </>
-            )}
-
-            <PanelTitle style={{ marginTop: '1rem' }}>Your Habits</PanelTitle>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {habits.length === 0 ? (
-                <span style={{ fontSize: '0.75rem', color: '#555' }}>No habits added yet.</span>
-              ) : (
-                habits.map(h => (
-                  <HabitItem key={h.id} $color={h.color}>
-                    <HabitInfo>
-                      <HabitName>{h.name}</HabitName>
-                    </HabitInfo>
-                    <DeleteButton onClick={() => handleDeleteHabit(h.id)} aria-label={`Delete ${h.name}`}>
-                      <Trash2 size={14} />
-                    </DeleteButton>
-                  </HabitItem>
-                ))
               )}
-            </div>
-          </Panel>
 
-          {/* Right panel: Dashboards */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {view === 'month' ? (
-              <>
-                <CalendarControl>
-                  <CalendarNavButton onClick={handlePrevMonth} aria-label="Previous month">
-                    <ChevronLeft size={16} />
-                  </CalendarNavButton>
-                  <CalendarLabel>
-                    {currentDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
-                  </CalendarLabel>
-                  <CalendarNavButton onClick={handleNextMonth} aria-label="Next month">
-                    <ChevronRight size={16} />
-                  </CalendarNavButton>
-                </CalendarControl>
-
-                {loading ? (
-                  <LoadingSpinner />
-                ) : habits.length === 0 ? (
-                  <div style={{ border: '1px dashed #222', padding: '4rem', textAlign: 'center', color: '#666' }}>
-                    <Calendar size={32} style={{ margin: '0 auto 1rem', color: '#333' }} />
-                    <span style={{ fontSize: '0.85rem' }}>Add a habit on the left to start tracking.</span>
-                  </div>
+              <div>
+                {habits.length === 0 ? (
+                  <span style={{ fontSize: '0.75rem', color: '#555' }}>No habits configured.</span>
                 ) : (
-                  <>
-                    <DesktopTableWrapper>
-                      <Table>
-                        <thead>
-                          <tr>
-                            <Th style={{ width: '160px', textAlign: 'left' }}>Habit</Th>
-                            {monthDays.map(d => (
-                              <Th key={d.day} $isToday={d.isToday}>
-                                {d.label}
-                              </Th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {habits.map(h => (
-                            <tr key={h.id}>
-                              <Td style={{ textOverflow: 'ellipsis' }}>
-                                <HabitRowHeader>
-                                  <ColorIndicator $color={h.color} />
-                                  <RowHabitName title={h.name}>{h.name}</RowHabitName>
-                                </HabitRowHeader>
-                              </Td>
-                              {monthDays.map(d => {
-                                const isChecked = !!logsMap[`${h.id}_${d.dateStr}`];
-                                return (
-                                  <Td key={d.day}>
-                                    <CheckSquare
-                                      $color={h.color}
-                                      $checked={isChecked}
-                                      $isToday={d.isToday}
-                                      onClick={() => handleToggleLog(h.id, d.dateStr)}
-                                      aria-label={`Toggle checkin for ${h.name} on ${d.dateStr}`}
-                                    >
-                                      {isChecked && <Check size={12} />}
-                                    </CheckSquare>
-                                  </Td>
-                                );
-                              })}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </Table>
-                    </DesktopTableWrapper>
-
-                    <MobileTableWrapper>
-                      <MobileTable>
-                        <thead>
-                          <tr>
-                            <MobileTh style={{ width: '60px', textAlign: 'left' }}>Date</MobileTh>
-                            {habits.map(h => (
-                              <MobileTh key={h.id}>
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
-                                  <ColorIndicator $color={h.color} />
-                                  <div style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '60px' }} title={h.name}>
-                                    {h.name}
-                                  </div>
-                                </div>
-                              </MobileTh>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {monthDays.map(d => (
-                            <tr key={d.day}>
-                              <MobileTd $isToday={d.isToday} style={{ textAlign: 'left' }}>
-                                <MobileDayLabel $isToday={d.isToday}>
-                                  {d.day} {d.isToday && '(Today)'}
-                                </MobileDayLabel>
-                              </MobileTd>
-                              {habits.map(h => {
-                                const isChecked = !!logsMap[`${h.id}_${d.dateStr}`];
-                                return (
-                                  <MobileTd key={h.id} $isToday={d.isToday}>
-                                    <CheckSquare
-                                      $color={h.color}
-                                      $checked={isChecked}
-                                      $isToday={d.isToday}
-                                      onClick={() => handleToggleLog(h.id, d.dateStr)}
-                                      aria-label={`Toggle checkin for ${h.name} on ${d.dateStr}`}
-                                    >
-                                      {isChecked && <Check size={12} />}
-                                    </CheckSquare>
-                                  </MobileTd>
-                                );
-                              })}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </MobileTable>
-                    </MobileTableWrapper>
-                  </>
+                  habits.map(h => (
+                    <HabitItem key={h.id} $color={h.color}>
+                      <HabitName>{h.name}</HabitName>
+                      <DeleteButton onClick={() => handleDeleteHabit(h.id)} aria-label={`Delete ${h.name}`}>
+                        <Trash2 size={14} />
+                      </DeleteButton>
+                    </HabitItem>
+                  ))
                 )}
-              </>
-            ) : (
-              <>
-                <CalendarControl>
-                  <CalendarNavButton onClick={handlePrevYear} aria-label="Previous year">
-                    <ChevronLeft size={16} />
-                  </CalendarNavButton>
-                  <CalendarLabel>{year}</CalendarLabel>
-                  <CalendarNavButton onClick={handleNextYear} aria-label="Next year">
-                    <ChevronRight size={16} />
-                  </CalendarNavButton>
-                </CalendarControl>
-
-                {loading ? (
-                  <LoadingSpinner />
-                ) : habits.length === 0 ? (
-                  <div style={{ border: '1px dashed #222', padding: '4rem', textAlign: 'center', color: '#666' }}>
-                    <Activity size={32} style={{ margin: '0 auto 1rem', color: '#333' }} />
-                    <span style={{ fontSize: '0.85rem' }}>Add a habit on the left to view the Yearly dashboard.</span>
-                  </div>
-                ) : (
-                  <YearGridWrapper>
-                    {habits.map(h => {
-                      const totalLogsThisYear = logs.filter(l => l.habit_id === h.id).length;
-                      return (
-                        <HabitYearCard key={h.id} $color={h.color}>
-                          <HabitYearHeader>
-                            <HabitYearTitle>
-                              <ColorIndicator $color={h.color} />
-                              {h.name}
-                            </HabitYearTitle>
-                            <YearStats>
-                              {totalLogsThisYear} check-ins in {year}
-                            </YearStats>
-                          </HabitYearHeader>
-                          <MonthsRow>
-                            {yearlyMonths.map(m => (
-                              <MonthBox key={m.name}>
-                                <MonthLabel>{m.name}</MonthLabel>
-                                <DaysPixelGrid>
-                                  {m.days.map(d => {
-                                    const isChecked = !!logsMap[`${h.id}_${d.dateStr}`];
-                                    return (
-                                      <PixelCell
-                                        key={d.dayNum}
-                                        $color={h.color}
-                                        $checked={isChecked}
-                                        $isToday={d.isToday}
-                                        onClick={() => handleToggleLog(h.id, d.dateStr)}
-                                        title={`${h.name}: ${d.dateStr}`}
-                                      />
-                                    );
-                                  })}
-                                </DaysPixelGrid>
-                              </MonthBox>
-                            ))}
-                          </MonthsRow>
-                        </HabitYearCard>
-                      );
-                    })}
-                  </YearGridWrapper>
-                )}
-              </>
-            )}
+              </div>
+            </Card>
           </div>
-        </GridContainer>
+
+          {/* Right Column (Data Entry) */}
+          <Card>
+            <FormHeader>
+              <CardTitle style={{ borderBottom: 'none', paddingBottom: 0, marginBottom: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', minWidth: 0 }}>
+                {!isPastDay ? `Today — ${today}` : `Entry — ${selectedDate}`}
+              </CardTitle>
+            </FormHeader>
+
+            <ViewSection>
+              {habits.length === 0 ? (
+                <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
+                  No habits to check in. Add some on the left!
+                </div>
+              ) : (
+                habits.map(h => {
+                  const isChecked = !!logsMap[`${h.id}_${activeDate}`];
+                  return (
+                    <CheckinItem 
+                      key={h.id} 
+                      $color={h.color} 
+                      $checked={isChecked}
+                      $isPastDay={isPastDay}
+                      onClick={() => handleToggleLog(h.id)}
+                    >
+                      <span style={{ fontSize: '1rem', color: isChecked ? '#fff' : '#ccc', fontWeight: isChecked ? 'bold' : 'normal' }}>
+                        {h.name}
+                      </span>
+                      <CheckSquare $color={h.color} $checked={isChecked}>
+                        {isChecked && <Check size={16} />}
+                      </CheckSquare>
+                    </CheckinItem>
+                  );
+                })
+              )}
+            </ViewSection>
+          </Card>
+        </PageLayout>
       </MainContent>
     </Container>
   );

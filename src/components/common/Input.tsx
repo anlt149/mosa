@@ -8,6 +8,7 @@ export const Input = styled.input`
   font-family: inherit;
   font-size: 1rem;
   width: 100%;
+  box-sizing: border-box;
   outline: none;
   transition: border-color 0.2s;
 
@@ -28,6 +29,7 @@ export const TextArea = styled.textarea`
   font-family: inherit;
   font-size: 1rem;
   width: 100%;
+  box-sizing: border-box;
   min-height: 120px;
   resize: vertical;
   outline: none;
