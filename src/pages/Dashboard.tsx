@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabaseClient';
 import { ActivityHeatmap } from '../components/ActivityHeatmap';
 import { WeeklyTrend } from '../components/WeeklyTrend';
 import { useSearchParams } from 'react-router-dom';
-import { AlertCircle, History, Send, Calendar, Battery, HeartPulse } from 'lucide-react';
+import { AlertCircle, History, Send, Calendar, Battery, HeartPulse, BookOpen } from 'lucide-react';
 import { useVimNavigation } from '../hooks/useVimNavigation';
 
 /* ── Animations ──────────────────────────────────────────────── */
@@ -288,6 +288,45 @@ const SubmitButton = styled.button`
   }
 `;
 
+/* ── Journal Notes ── */
+const SectionTitle = styled.h3`
+  margin: 0 0 1.25rem 0;
+  font-size: 1.1rem;
+  color: #fff;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const NoteItem = styled.div`
+  padding: 1rem 0;
+  border-bottom: 1px solid #27272a;
+  &:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+  &:first-child {
+    padding-top: 0;
+  }
+`;
+
+const NoteDate = styled.div`
+  font-size: 0.8rem;
+  color: #10b981;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+`;
+
+const NoteText = styled.div`
+  font-size: 0.95rem;
+  color: #e4e4e7;
+  line-height: 1.5;
+  white-space: pre-wrap;
+`;
+
 /* ── Toast Notifications ── */
 const ToastContainer = styled.div`
   position: fixed;
@@ -382,6 +421,12 @@ export function Dashboard() {
       }
     }
     return missed;
+  }, [logs]);
+
+  const recentNotes = useMemo(() => {
+    return logs
+      .filter(l => l.note && l.note.trim().length > 0)
+      .slice(0, 5);
   }, [logs]);
 
   const yesterdayObj = new Date();
@@ -520,6 +565,28 @@ export function Dashboard() {
           <Card>
             <WeeklyTrend logs={logs} />
           </Card>
+          {recentNotes.length > 0 && (
+            <Card>
+              <SectionTitle>
+                <BookOpen size={18} color="#10b981" />
+                Recent Journal Notes
+              </SectionTitle>
+              <div>
+                {recentNotes.map(log => (
+                  <NoteItem key={log.id}>
+                    <NoteDate>
+                      {new Date(log.log_date + 'T12:00:00').toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric'
+                      })}
+                    </NoteDate>
+                    <NoteText>{log.note}</NoteText>
+                  </NoteItem>
+                ))}
+              </div>
+            </Card>
+          )}
         </Column>
 
         <Column>
