@@ -3,7 +3,7 @@ import styled, { keyframes } from 'styled-components';
 import { supabase } from '../lib/supabaseClient';
 import { Container, MainContent, Card, CardTitle } from '../components/common';
 import { Plus, Trash2, Check } from 'lucide-react';
-import { HabitHeatmap, HabitLog } from '../components/HabitHeatmap';
+import { HabitHeatmap, type HabitLog } from '../components/HabitHeatmap';
 import { useSearchParams } from 'react-router-dom';
 
 /* ── Animations ────────────────────────────────────────────── */
