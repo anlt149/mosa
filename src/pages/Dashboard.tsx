@@ -1,376 +1,323 @@
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { supabase } from '../lib/supabaseClient';
-import { Container, Card, CardTitle, MainContent, TextArea } from '../components/common';
 import { ActivityHeatmap } from '../components/ActivityHeatmap';
 import { WeeklyTrend } from '../components/WeeklyTrend';
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useVimNavigation } from '../hooks/useVimNavigation';
 import { useSearchParams } from 'react-router-dom';
-import { AlertTriangle } from 'lucide-react';
+import { AlertCircle, History, Send, Calendar, Battery, HeartPulse } from 'lucide-react';
+import { useVimNavigation } from '../hooks/useVimNavigation';
 
 /* ── Animations ──────────────────────────────────────────────── */
 const fadeIn = keyframes`
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 `;
 
 /* ── Layout ─────────────────────────────────────────────────── */
+const PageContainer = styled.div`
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  box-sizing: border-box;
+  animation: ${fadeIn} 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+`;
 
-const PageLayout = styled.div`
+const Header = styled.div`
+  margin-bottom: 2.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+`;
+
+const Title = styled.h1`
+  font-size: 2rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+  letter-spacing: -0.02em;
+
+  span {
+    color: #10b981;
+  }
+`;
+
+const DashboardGrid = styled.div`
   display: grid;
   grid-template-columns: 1fr;
   gap: 2rem;
   width: 100%;
+  
+  /* Ensure grids never overflow their containers */
+  min-width: 0;
 
-  @media (min-width: 992px) {
-    grid-template-columns: 1.2fr 1fr;
+  @media (min-width: 1024px) {
+    grid-template-columns: 1fr 400px;
     align-items: start;
   }
 `;
 
-const DashboardHeader = styled.div`
+const Column = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  margin-bottom: 1.5rem;
-  animation: ${fadeIn} 0.4s ease-out;
+  gap: 2rem;
+  min-width: 0; /* Crucial for preventing flex/grid overflow */
+`;
 
-  @media (min-width: 768px) {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: flex-end;
+/* ── Premium Cards ──────────────────────────────────────────── */
+const Card = styled.div`
+  background: #09090b;
+  border: 1px solid #27272a;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+
+  /* Subtle inner glow for premium feel */
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
   }
 `;
 
-const HeaderTitle = styled.h1`
-  font-size: 1.75rem;
-  font-weight: normal;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+/* ── Alert ──────────────────────────────────────────────────── */
+const AlertBanner = styled.div`
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  color: #fca5a5;
+  margin-bottom: 2rem;
+`;
+
+/* ── Input Form ─────────────────────────────────────────────── */
+const FormHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid #27272a;
+  padding-bottom: 1rem;
+`;
+
+const DateDisplay = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   color: #fff;
+  font-size: 1.1rem;
+  font-weight: 600;
+`;
+
+const ActionButton = styled.button`
+  background: #18181b;
+  color: #a1a1aa;
+  border: 1px solid #27272a;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: #27272a;
+    color: #fff;
+    border-color: #3f3f46;
+  }
+  
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+`;
+
+const InputSection = styled.div<{ $active: boolean }>`
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.25rem;
+  border-radius: 12px;
+  background: ${({ $active }) => $active ? '#18181b' : 'transparent'};
+  border: 1px solid ${({ $active }) => $active ? '#3f3f46' : 'transparent'};
+  transition: all 0.3s ease;
+  margin-bottom: 0.5rem;
+`;
+
+const LabelRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #e4e4e7;
+  font-weight: 600;
+  font-size: 0.95rem;
+
+  svg {
+    color: #10b981;
+  }
+`;
+
+const ScoreValue = styled.span`
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #10b981;
+  font-variant-numeric: tabular-nums;
+`;
+
+/* ── Beautiful Range Slider ── */
+const SliderWrapper = styled.div`
+  position: relative;
+  width: 100%;
+  padding: 10px 0;
+`;
+
+const RangeInput = styled.input<{ $progress: number }>`
+  -webkit-appearance: none;
+  width: 100%;
+  background: transparent;
+  outline: none;
+  position: relative;
+  z-index: 2;
   margin: 0;
 
-  span {
-    color: #10b981;
-    font-weight: bold;
+  &::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 8px;
+    background: #27272a;
+    border-radius: 4px;
+    border: none;
+  }
+
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 24px;
+    width: 24px;
+    border-radius: 50%;
+    background: #fff;
+    border: 3px solid #10b981;
+    margin-top: -8px;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+    transition: transform 0.1s;
+  }
+
+  &::-webkit-slider-thumb:active {
+    transform: scale(1.15);
+  }
+
+  /* Fill progress effect */
+  &::before {
+    content: '';
+    position: absolute;
+    top: 10px;
+    left: 0;
+    height: 8px;
+    width: ${({ $progress }) => $progress}%;
+    background: linear-gradient(90deg, #059669, #10b981);
+    border-radius: 4px;
+    z-index: -1;
+    pointer-events: none;
   }
 `;
 
-/* ── Section card ───────────────────────────────────────────── */
+const NoteArea = styled.textarea<{ $active: boolean }>`
+  width: 100%;
+  background: #18181b;
+  border: 1px solid ${({ $active }) => $active ? '#10b981' : '#27272a'};
+  border-radius: 12px;
+  padding: 1rem;
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.95rem;
+  min-height: 120px;
+  resize: vertical;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
 
-const Section = styled.div<{ $active: boolean; $isPastDay?: boolean }>`
-  border: 2px solid ${props => {
-    if (!props.$active) return '#333';
-    return props.$isPastDay ? '#ffb300' : '#fff';
-  }};
-  padding: 1.25rem 1.5rem;
-  transition: border-color 0.2s ease;
+  &:focus {
+    outline: none;
+    border-color: #10b981;
+    box-shadow: 0 0 0 1px #10b981;
+  }
+
+  &::placeholder {
+    color: #52525b;
+  }
+`;
+
+const SubmitButton = styled.button`
+  width: 100%;
+  background: #10b981;
+  color: #000;
+  border: none;
+  border-radius: 12px;
+  padding: 1.25rem;
+  font-size: 1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  margin-top: 1.5rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover:not(:disabled) {
+    background: #34d399;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+  }
+
+  &:disabled {
+    background: #27272a;
+    color: #52525b;
+    cursor: not-allowed;
+  }
+`;
+
+/* ── Toast Notifications ── */
+const ToastContainer = styled.div`
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  background-color: #0b0b0b;
-`;
-
-const SectionTitle = styled.h3`
-  margin: 0;
-  font-size: 1rem;
-  font-weight: normal;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: ${props => props.color || '#fff'};
-`;
-
-/* ── Score row (+/- controls) ────────────────────────────────── */
-
-const ScoreRow = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 2rem;
-`;
-
-const ScoreDisplay = styled.div`
-  font-size: 3.5rem;
-  font-weight: bold;
-  min-width: 4rem;
-  text-align: center;
-  color: inherit;
-`;
-
-const StepButton = styled.button`
-  background: none;
-  border: 2px solid #444;
-  color: #fff;
-  font-size: 1.75rem;
-  line-height: 1;
-  width: 2.5rem;
-  height: 2.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-family: inherit;
-  transition: border-color 0.15s, color 0.15s;
-
-  &:hover {
-    border-color: #fff;
-  }
-  &:active {
-    background: #fff;
-    color: #000;
-  }
-  &:disabled {
-    opacity: 0.25;
-    cursor: default;
-  }
-`;
-
-/* ── Tick bar (visual only, no click) ────────────────────────── */
-
-const TickBar = styled.div`
-  display: flex;
-  gap: 3px;
-`;
-
-const Tick = styled.div<{ $active: boolean; $isPastDay?: boolean }>`
-  flex: 1;
-  height: 4px;
-  background-color: ${props => {
-    if (!props.$active) return '#222';
-    return props.$isPastDay ? '#ffb300' : '#fff';
-  }};
-  transition: background-color 0.1s;
-`;
-
-/* ── Submit button ───────────────────────────────────────────── */
-
-const SubmitButton = styled.button<{ $active: boolean; $isPastDay?: boolean }>`
-  width: 100%;
-  padding: 1rem;
-  font-size: 1rem;
-  font-family: inherit;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  cursor: pointer;
-  border: 2px solid ${props => {
-    if (!props.$active) return '#333';
-    return props.$isPastDay ? '#ffb300' : '#fff';
-  }};
-  background-color: ${props => {
-    if (!props.$active) return '#000';
-    return props.$isPastDay ? '#ffb300' : '#fff';
-  }};
-  color: ${props => {
-    if (!props.$active) return '#666';
-    return props.$isPastDay ? '#000' : '#000';
-  }};
-  transition: all 0.15s;
-  margin-top: 0.5rem;
-
-  &:hover:not(:disabled) {
-    border-color: ${props => props.$isPastDay ? '#ffb300' : '#fff'};
-    color: ${props => props.$isPastDay ? '#ffb300' : '#fff'};
-    background: #000;
-  }
-  &:disabled {
-    opacity: 0.4;
-    cursor: default;
-  }
-`;
-
-/* ── Form card header ───────────────────────────────────────── */
-
-const FormHeader = styled.div`
-  display: flex;
-  align-items: center;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #222;
-  overflow: hidden;
-  width: 100%;
-  min-width: 0;
-`;
-
-const ViewSection = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-`;
-
-const ActionRow = styled.div`
-  display: flex;
-  gap: 0.75rem;
-
-  @media (max-width: 480px) {
-    flex-direction: column;
-  }
-`;
-
-const SecondaryButton = styled.button`
-  flex: 1;
-  background: none;
-  border: 1px solid #333;
-  color: #aaa;
-  padding: 0.85rem;
-  font-family: inherit;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: all 0.15s;
-
-  &:hover {
-    border-color: #fff;
-    color: #fff;
-  }
-`;
-
-const DangerButton = styled.button`
-  flex: 1;
-  background: none;
-  border: 1px solid #422;
-  color: #c88;
-  padding: 0.85rem;
-  font-family: inherit;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: all 0.15s;
-
-  &:hover {
-    border-color: #f88;
-    color: #f88;
-    background: #190e0e;
-  }
-`;
-
-const ToastContainer = styled.div`
-  position: fixed;
-  top: 2rem;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.75rem;
-  z-index: 1000;
+  z-index: 2000;
   pointer-events: none;
 `;
 
 const Toast = styled.div<{ $type: 'success' | 'error' }>`
-  background: #111;
-  border: 2px solid ${props => props.$type === 'success' ? '#10b981' : '#ef4444'};
+  background: #18181b;
+  border-left: 4px solid ${props => props.$type === 'success' ? '#10b981' : '#ef4444'};
   color: #fff;
-  padding: 0.85rem 1.25rem;
-  font-family: inherit;
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
   font-size: 0.9rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-  animation: slideInTop 0.2s ease-out;
-  pointer-events: auto;
+  font-weight: 500;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 
-  @keyframes slideInTop {
-    from { transform: translateY(-100%); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
+  @keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
   }
 `;
 
-const MissedDaysAlert = styled.div`
-  background-color: rgba(239, 68, 68, 0.1);
-  border: 1px solid #ef4444;
-  color: #fca5a5;
-  padding: 1rem;
-  margin-bottom: 1.5rem;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  font-size: 0.9rem;
-  line-height: 1.4;
-`;
-
-const ModalOverlay = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.85);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1100;
-`;
-
-const ModalContent = styled.div`
-  background: #111;
-  border: 2px solid #ef4444;
-  padding: 2rem;
-  max-width: 400px;
-  width: 90%;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.8);
-`;
-
-const ModalTitle = styled.h3`
-  margin: 0;
-  font-size: 1.25rem;
-  color: #fff;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-`;
-
-const ModalBody = styled.p`
-  margin: 0;
-  font-size: 0.95rem;
-  color: #ccc;
-  line-height: 1.5;
-`;
-
-const RecentNotesList = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-`;
-
-const NoteItem = styled.div<{ $selected: boolean }>`
-  background: #090909;
-  border: 1px solid ${props => props.$selected ? '#fff' : '#222'};
-  padding: 1rem;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  transition: all 0.15s ease-in-out;
-
-  &:hover {
-    border-color: #555;
-    background: #121212;
-  }
-`;
-
-const NoteItemDate = styled.span<{ $selected: boolean }>`
-  font-size: 0.75rem;
-  color: ${props => props.$selected ? '#fff' : '#888'};
-  font-weight: bold;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-`;
-
-const NoteItemText = styled.p`
-  margin: 0;
-  font-size: 0.9rem;
-  color: #ccc;
-  line-height: 1.4;
-  white-space: pre-wrap;
-  word-break: break-word;
-`;
-
+/* ── Interfaces ──────────────────────────────────────────────── */
 interface DailyLog {
   id: string;
   user_id: string;
@@ -378,30 +325,14 @@ interface DailyLog {
   mood_score: number;
   energy_level: number;
   note: string | null;
-  tags?: string[];
   created_at: string;
 }
-
-const NOTIFICATION_MESSAGES = {
-  SUCCESS: {
-    SUBMIT: 'Daily log submitted successfully.',
-    UPDATE: 'Daily log updated successfully.',
-    DELETE: 'Daily log deleted successfully.',
-  },
-  ERROR: {
-    SUBMIT: 'Failed to save log: ',
-    DELETE: 'Failed to delete log: ',
-    AUTH: 'User session not found.',
-  }
-} as const;
 
 interface ToastMessage {
   id: number;
   text: string;
   type: 'success' | 'error';
 }
-
-/* ══════════════════════════════════════════════════════════════ */
 
 export function Dashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -415,7 +346,6 @@ export function Dashboard() {
   const [selectedDate, setSelectedDate] = useState(urlDate || '');
   const [activeSection, setActiveSection] = useState<'mood' | 'energy' | 'note' | 'submit'>('mood');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Sync state with URL parameter if it changes
   useEffect(() => {
@@ -427,14 +357,14 @@ export function Dashboard() {
       }
     };
     run();
-    return () => {
-      ignore = true;
-    };
+    return () => { ignore = true; };
   }, [urlDate]);
 
-  const today = new Date().toISOString().split('T')[0];
-  const isPastDay = !!(selectedDate && selectedDate !== today);
-  const activeDate = selectedDate || today;
+  const todayObj = new Date();
+  const todayStr = `${todayObj.getFullYear()}-${String(todayObj.getMonth() + 1).padStart(2, '0')}-${String(todayObj.getDate()).padStart(2, '0')}`;
+  
+  const activeDate = selectedDate || todayStr;
+  const isPastDay = activeDate !== todayStr;
   const selectedLog = logs.find(l => l.log_date === activeDate);
 
   const missedDaysThisWeek = useMemo(() => {
@@ -446,9 +376,9 @@ export function Dashboard() {
     for (let i = daysSinceMonday; i > 0; i--) {
       const d = new Date();
       d.setDate(current.getDate() - i);
-      const dateStr = d.toISOString().split('T')[0];
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       if (!logs.some(l => l.log_date === dateStr)) {
-        missed.push(d.toLocaleDateString('en-US', { weekday: 'long' }));
+        missed.push(d.toLocaleDateString('en-US', { weekday: 'short' }));
       }
     }
     return missed;
@@ -456,7 +386,7 @@ export function Dashboard() {
 
   const yesterdayObj = new Date();
   yesterdayObj.setDate(new Date().getDate() - 1);
-  const yesterdayStr = yesterdayObj.toISOString().split('T')[0];
+  const yesterdayStr = `${yesterdayObj.getFullYear()}-${String(yesterdayObj.getMonth() + 1).padStart(2, '0')}-${String(yesterdayObj.getDate()).padStart(2, '0')}`;
   const yesterdayLog = logs.find(l => l.log_date === yesterdayStr);
 
   const showToast = useCallback((text: string, type: 'success' | 'error') => {
@@ -464,10 +394,9 @@ export function Dashboard() {
     setToasts(prev => [...prev, { id, text, type }]);
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
-    }, 3000);
+    }, 4000);
   }, []);
 
-  // Run Vim navigation hook
   useVimNavigation({
     activeSection,
     setActiveSection,
@@ -475,25 +404,22 @@ export function Dashboard() {
     setMood,
     energy,
     setEnergy,
-    onSubmit: () => {
-      handleSubmit();
-    },
+    onSubmit: () => handleSubmit(),
     disabled: false
   });
-
-  /* ── Data fetching ─────────────────────────────────────────── */
 
   const fetchLogs = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const ninetyDaysAgo = new Date();
-    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+    const pastDate = new Date();
+    pastDate.setDate(pastDate.getDate() - 90);
+    const pastDateStr = `${pastDate.getFullYear()}-${String(pastDate.getMonth() + 1).padStart(2, '0')}-${String(pastDate.getDate()).padStart(2, '0')}`;
 
     const { data, error } = await supabase
       .from('daily_logs')
       .select('*')
-      .gte('log_date', ninetyDaysAgo.toISOString().split('T')[0])
+      .gte('log_date', pastDateStr)
       .order('log_date', { ascending: false });
 
     if (error) console.error('Error fetching logs:', error);
@@ -501,15 +427,12 @@ export function Dashboard() {
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchLogs();
   }, [fetchLogs]);
 
-  // Reactive Form Hydration
   useEffect(() => {
-    const activeDate = selectedDate || today;
+    const activeDate = selectedDate || todayStr;
     const existing = logs.find(l => l.log_date === activeDate);
-    /* eslint-disable react-hooks/set-state-in-effect */
     if (existing) {
       setMood(existing.mood_score);
       setEnergy(existing.energy_level);
@@ -519,10 +442,7 @@ export function Dashboard() {
       setEnergy(5);
       setNote('');
     }
-    /* eslint-enable react-hooks/set-state-in-effect */
-  }, [selectedDate, logs, today]);
-
-  /* ── Handlers ──────────────────────────────────────────────── */
+  }, [selectedDate, logs, todayStr]);
 
   const handleSubmit = useCallback(async () => {
     if (submitting) return;
@@ -531,11 +451,11 @@ export function Dashboard() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       setSubmitting(false);
-      showToast(NOTIFICATION_MESSAGES.ERROR.AUTH, 'error');
+      showToast('User session not found.', 'error');
       return;
     }
 
-    const logDate = selectedDate || today;
+    const logDate = selectedDate || todayStr;
 
     const { error } = await supabase
       .from('daily_logs')
@@ -548,61 +468,14 @@ export function Dashboard() {
       }, { onConflict: 'user_id,log_date' });
 
     if (error) {
-      console.error('Error submitting log:', error);
-      showToast(NOTIFICATION_MESSAGES.ERROR.SUBMIT + error.message, 'error');
+      showToast('Failed to save log.', 'error');
     } else {
       await fetchLogs();
-      showToast(
-        selectedLog ? NOTIFICATION_MESSAGES.SUCCESS.UPDATE : NOTIFICATION_MESSAGES.SUCCESS.SUBMIT,
-        'success'
-      );
+      showToast(selectedLog ? 'Log updated successfully.' : 'Log submitted successfully.', 'success');
+      setActiveSection('mood'); // Reset focus
     }
     setSubmitting(false);
-  }, [mood, energy, note, selectedDate, selectedLog, fetchLogs, submitting, today, showToast]);
-
-  const handleDelete = () => {
-    setShowDeleteConfirm(true);
-  };
-
-  const confirmDelete = async () => {
-    setShowDeleteConfirm(false);
-    const targetDate = selectedDate || today;
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      showToast(NOTIFICATION_MESSAGES.ERROR.AUTH, 'error');
-      return;
-    }
-
-    const { error } = await supabase
-      .from('daily_logs')
-      .delete()
-      .eq('user_id', user.id)
-      .eq('log_date', targetDate);
-
-    if (error) {
-      console.error('Error deleting log:', error);
-      showToast(NOTIFICATION_MESSAGES.ERROR.DELETE + error.message, 'error');
-    } else {
-      await fetchLogs();
-      showToast(NOTIFICATION_MESSAGES.SUCCESS.DELETE, 'success');
-      if (selectedDate) {
-        setSelectedDate('');
-      }
-    }
-  };
-
-  const handleReset = () => {
-    if (isPastDay) {
-      setSelectedDate('');
-      setSearchParams({});
-    } else {
-      setMood(5);
-      setEnergy(5);
-      setNote('');
-    }
-    setActiveSection('mood');
-  };
+  }, [mood, energy, note, selectedDate, selectedLog, fetchLogs, submitting, todayStr, showToast]);
 
   const handleDateSelect = (dateStr: string) => {
     setSelectedDate(dateStr);
@@ -619,218 +492,120 @@ export function Dashboard() {
     }
   };
 
-  /* ── Render ────────────────────────────────────────────────── */
-
-  const recentNotes = logs
-    .filter(log => log.note && log.note.trim() !== '')
-    .slice(0, 5);
-
   return (
-    <Container>
-      <MainContent>
-        <DashboardHeader>
+    <PageContainer>
+      <Header>
+        <Title>Mood <span>Tracker</span></Title>
+      </Header>
+
+      {missedDaysThisWeek.length > 0 && (
+        <AlertBanner>
+          <AlertCircle size={24} style={{ flexShrink: 0 }} />
           <div>
-            <HeaderTitle>
-              Mood <span>Tracker</span>
-            </HeaderTitle>
+            <strong style={{ display: 'block', marginBottom: '0.25rem' }}>Forgot to log?</strong>
+            You missed logging your mood on: {missedDaysThisWeek.join(', ')}.
           </div>
-        </DashboardHeader>
-        <PageLayout>
+        </AlertBanner>
+      )}
 
-          {/* Left Column Stack */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', width: '100%' }}>
-            {/* Heatmap */}
-            <Card>
-              <ActivityHeatmap
-                logs={logs}
-                onSelectDate={handleDateSelect}
-                selectedDate={selectedDate}
-              />
-            </Card>
-
-            {/* Weekly Trend */}
-            <Card>
-              <WeeklyTrend logs={logs} />
-            </Card>
-
-            {/* Recent Notes */}
-            <Card>
-              <CardTitle style={{ borderBottom: '1px solid #222', paddingBottom: '0.75rem', marginBottom: '1rem' }}>
-                Recent Notes
-              </CardTitle>
-              {recentNotes.length > 0 ? (
-                <RecentNotesList>
-                  {recentNotes.map((log) => {
-                    const isSelected = selectedDate === log.log_date;
-                    return (
-                      <NoteItem
-                        key={log.id}
-                        $selected={isSelected}
-                        onClick={() => handleDateSelect(log.log_date)}
-                      >
-                        <NoteItemDate $selected={isSelected}>
-                          {log.log_date}
-                        </NoteItemDate>
-                        <NoteItemText>{log.note}</NoteItemText>
-                      </NoteItem>
-                    );
-                  })}
-                </RecentNotesList>
-              ) : (
-                <div style={{ color: '#555', fontStyle: 'italic', textAlign: 'center', padding: '1rem 0' }}>
-                  No journal notes recorded yet.
-                </div>
-              )}
-            </Card>
-          </div>
-
-          {/* ── Details / Data Entry (right/bottom) ── */}
+      <DashboardGrid>
+        <Column>
           <Card>
-            {missedDaysThisWeek.length > 0 && (
-              <MissedDaysAlert>
-                <AlertTriangle size={20} />
-                <div>
-                  <strong>Forgot to log?</strong> You missed logging your mood for: {missedDaysThisWeek.join(', ')}.
-                </div>
-              </MissedDaysAlert>
-            )}
+            <ActivityHeatmap
+              logs={logs}
+              onSelectDate={handleDateSelect}
+              selectedDate={activeDate}
+            />
+          </Card>
+          <Card>
+            <WeeklyTrend logs={logs} />
+          </Card>
+        </Column>
+
+        <Column>
+          <Card style={{ padding: '2rem' }}>
             <FormHeader>
-              <CardTitle style={{ borderBottom: 'none', paddingBottom: 0, marginBottom: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0 }}>
-                {!isPastDay ? `Today — ${today}` : `Entry — ${selectedDate}`}
-              </CardTitle>
-              {activeDate === today && (
-                <SecondaryButton 
+              <DateDisplay>
+                <Calendar size={20} color="#10b981" />
+                {isPastDay ? activeDate : 'Today'}
+              </DateDisplay>
+              
+              {!isPastDay && (
+                <ActionButton 
                   onClick={handleSameAsYesterday}
                   disabled={!yesterdayLog}
-                  style={{ width: 'auto', padding: '0.4rem 0.8rem', fontSize: '0.75rem', opacity: yesterdayLog ? 1 : 0.4, flexShrink: 0, marginLeft: '0.5rem' }}
                 >
-                  Same as Yesterday
-                </SecondaryButton>
+                  <History size={14} />
+                  Copy Yesterday
+                </ActionButton>
               )}
             </FormHeader>
 
-            <ViewSection>
-              {/* Mood 0–10 */}
-              <Section 
-                $active={activeSection === 'mood'} 
-                $isPastDay={isPastDay}
-                onClick={() => setActiveSection('mood')}
-                style={{ cursor: 'pointer' }}
-              >
-                <SectionTitle color={activeSection === 'mood' ? (isPastDay ? '#ffb300' : '#fff') : '#aaa'}>
-                  Mood (0–10)
-                </SectionTitle>
-                <ScoreRow>
-                  <StepButton
-                    onClick={(e) => { e.stopPropagation(); setMood(v => Math.max(0, v - 1)); }}
-                    disabled={mood <= 0}
-                    aria-label="Decrease mood"
-                  >−</StepButton>
-                  <ScoreDisplay>{mood}</ScoreDisplay>
-                  <StepButton
-                    onClick={(e) => { e.stopPropagation(); setMood(v => Math.min(10, v + 1)); }}
-                    disabled={mood >= 10}
-                    aria-label="Increase mood"
-                  >+</StepButton>
-                </ScoreRow>
-                <TickBar>
-                  {Array.from({ length: 11 }, (_, i) => (
-                    <Tick key={i} $active={i <= mood} $isPastDay={isPastDay} />
-                  ))}
-                </TickBar>
-              </Section>
+            <InputSection 
+              $active={activeSection === 'mood'} 
+              onClick={() => setActiveSection('mood')}
+            >
+              <LabelRow>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <HeartPulse size={18} /> Mood
+                </div>
+                <ScoreValue>{mood}</ScoreValue>
+              </LabelRow>
+              <SliderWrapper>
+                <RangeInput 
+                  type="range" 
+                  min="0" 
+                  max="10" 
+                  value={mood} 
+                  $progress={(mood / 10) * 100}
+                  onChange={e => setMood(parseInt(e.target.value))}
+                />
+              </SliderWrapper>
+            </InputSection>
 
-              {/* Energy 0–10 */}
-              <Section 
-                $active={activeSection === 'energy'} 
-                $isPastDay={isPastDay}
-                onClick={() => setActiveSection('energy')}
-                style={{ cursor: 'pointer' }}
-              >
-                <SectionTitle color={activeSection === 'energy' ? (isPastDay ? '#ffb300' : '#fff') : '#aaa'}>
-                  Energy (0–10)
-                </SectionTitle>
-                <ScoreRow>
-                  <StepButton
-                    onClick={(e) => { e.stopPropagation(); setEnergy(v => Math.max(0, v - 1)); }}
-                    disabled={energy <= 0}
-                    aria-label="Decrease energy"
-                  >−</StepButton>
-                  <ScoreDisplay>{energy}</ScoreDisplay>
-                  <StepButton
-                    onClick={(e) => { e.stopPropagation(); setEnergy(v => Math.min(10, v + 1)); }}
-                    disabled={energy >= 10}
-                    aria-label="Increase energy"
-                  >+</StepButton>
-                </ScoreRow>
-                <TickBar>
-                  {Array.from({ length: 11 }, (_, i) => (
-                    <Tick key={i} $active={i <= energy} $isPastDay={isPastDay} />
-                  ))}
-                </TickBar>
-              </Section>
+            <InputSection 
+              $active={activeSection === 'energy'} 
+              onClick={() => setActiveSection('energy')}
+            >
+              <LabelRow>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Battery size={18} /> Energy
+                </div>
+                <ScoreValue>{energy}</ScoreValue>
+              </LabelRow>
+              <SliderWrapper>
+                <RangeInput 
+                  type="range" 
+                  min="0" 
+                  max="10" 
+                  value={energy} 
+                  $progress={(energy / 10) * 100}
+                  onChange={e => setEnergy(parseInt(e.target.value))}
+                />
+              </SliderWrapper>
+            </InputSection>
 
-              {/* Note */}
-              <TextArea
-                id="note-input"
-                placeholder="How was your day? (journal note)..."
+            <div style={{ marginTop: '1rem' }}>
+              <NoteArea
+                placeholder="Journal your day..."
                 value={note}
-                onChange={e => setNote(e.target.value)}
+                $active={activeSection === 'note'}
                 onFocus={() => setActiveSection('note')}
-                style={{
-                  border: activeSection === 'note' ? `2px solid ${isPastDay ? '#ffb300' : '#fff'}` : '1px solid #333',
-                  transition: 'border-color 0.2s ease',
-                }}
+                onChange={e => setNote(e.target.value)}
               />
+            </div>
 
-              {/* Submit */}
-              <SubmitButton
-                $active={activeSection === 'submit'}
-                $isPastDay={isPastDay}
-                onClick={handleSubmit}
-                disabled={submitting}
-                onFocus={() => setActiveSection('submit')}
-              >
-                {submitting ? 'Saving…' : selectedLog ? 'Update Entry' : 'Submit Entry'}
-              </SubmitButton>
-
-              {/* Secondary Actions Row */}
-              <ActionRow style={{ height: '44px' }}>
-                <SecondaryButton onClick={handleReset}>
-                  {isPastDay ? 'Cancel / Back' : 'Clear Form'}
-                </SecondaryButton>
-                <DangerButton 
-                  onClick={handleDelete}
-                  disabled={!selectedLog}
-                  style={{ opacity: selectedLog ? 1 : 0.3, cursor: selectedLog ? 'pointer' : 'default' }}
-                >
-                  Delete Log
-                </DangerButton>
-              </ActionRow>
-            </ViewSection>
+            <SubmitButton 
+              onClick={handleSubmit} 
+              disabled={submitting}
+              onFocus={() => setActiveSection('submit')}
+            >
+              <Send size={18} />
+              {submitting ? 'Saving...' : (selectedLog ? 'Update Entry' : 'Save Entry')}
+            </SubmitButton>
           </Card>
-
-        </PageLayout>
-      </MainContent>
-
-      {showDeleteConfirm && (
-        <ModalOverlay onClick={() => setShowDeleteConfirm(false)}>
-          <ModalContent onClick={(e) => e.stopPropagation()}>
-            <ModalTitle>Delete Entry?</ModalTitle>
-            <ModalBody>
-              Are you sure you want to permanently delete the log entry for {activeDate}? This action cannot be undone.
-            </ModalBody>
-            <ActionRow style={{ height: '44px' }}>
-              <SecondaryButton onClick={() => setShowDeleteConfirm(false)}>
-                Cancel
-              </SecondaryButton>
-              <DangerButton onClick={confirmDelete} style={{ borderColor: '#ef4444', color: '#ef4444' }}>
-                Delete
-              </DangerButton>
-            </ActionRow>
-          </ModalContent>
-        </ModalOverlay>
-      )}
+        </Column>
+      </DashboardGrid>
 
       <ToastContainer>
         {toasts.map(toast => (
@@ -839,7 +614,6 @@ export function Dashboard() {
           </Toast>
         ))}
       </ToastContainer>
-    </Container>
+    </PageContainer>
   );
 }
-

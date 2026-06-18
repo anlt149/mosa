@@ -1,121 +1,147 @@
-
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import styled from 'styled-components';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const HeatmapContainer = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  max-width: 480px;
-  margin: 0 auto;
+  gap: 1.5rem;
   width: 100%;
 `;
 
-const HeatmapHeader = styled.div`
+const HeaderRow = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
 `;
 
-const HeatmapTitle = styled.h3`
+const MonthTitle = styled.h3`
   margin: 0;
-  font-size: 1rem;
-  font-weight: normal;
+  font-size: 1.1rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   color: #fff;
-  text-align: center;
+`;
+
+const NavControls = styled.div`
+  display: flex;
+  gap: 0.5rem;
 `;
 
 const NavButton = styled.button`
-  background: none;
-  border: none;
-  color: #aaa;
+  background: #18181b;
+  border: 1px solid #27272a;
+  border-radius: 8px;
+  color: #a1a1aa;
   cursor: pointer;
-  font-family: inherit;
-  font-size: 1rem;
-  padding: 0.25rem 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  transition: all 0.2s ease;
+
   &:hover {
     color: #fff;
+    border-color: #3f3f46;
+    background: #27272a;
   }
 `;
 
 const Grid = styled.div`
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
+  gap: 8px;
+`;
+
+const WeekdayLabelRow = styled.div`
+  display: contents;
 `;
 
 const DayLabel = styled.div`
   text-align: center;
   font-size: 0.75rem;
-  color: #666;
-  padding-bottom: 0.5rem;
+  font-weight: 600;
+  color: #52525b;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
 `;
 
-const DaySquare = styled.div<{ $intensity: number; $isPlaceholder: boolean; $selected: boolean }>`
+const DayCellContainer = styled.div`
+  width: 100%;
   aspect-ratio: 1;
-  border-radius: 2px;
+  position: relative;
+`;
+
+const DaySquare = styled.button<{ $intensity: number; $isPlaceholder: boolean; $selected: boolean; $isToday: boolean }>`
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
   background-color: ${({ $intensity, $isPlaceholder }) => {
     if ($isPlaceholder) return 'transparent';
-    if ($intensity === 0) return '#161b22'; // Empty
-    if ($intensity < 0.3) return '#450a0a'; // Low: Dark red/rust (dark/warm)
-    if ($intensity < 0.6) return '#b45309'; // Medium-Low: Warm orange
-    if ($intensity < 0.8) return '#0284c7'; // Medium-High: Calm blue
-    return '#10b981'; // High: Happy green
+    if ($intensity === 0) return '#18181b'; 
+    if ($intensity < 0.3) return '#064e3b'; 
+    if ($intensity < 0.6) return '#059669'; 
+    if ($intensity < 0.8) return '#10b981'; 
+    return '#34d399'; 
   }};
-  border: ${({ $selected }) => $selected ? '2px solid #fff' : '2px solid transparent'};
-  position: relative;
-  cursor: ${({ $isPlaceholder }) => $isPlaceholder ? 'default' : 'pointer'};
-  touch-action: manipulation;
-  
-  @media (hover: hover) {
-    &:hover::after {
-      content: attr(data-tooltip);
-      position: absolute;
-      bottom: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #fff;
-      color: #000;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 10px;
-      white-space: nowrap;
-      z-index: 10;
-      margin-bottom: 4px;
-      pointer-events: none;
-      display: ${({ $isPlaceholder }) => $isPlaceholder ? 'none' : 'block'};
-    }
-  }
-`;
-const DayNumber = styled.div`
-  font-size: 0.6rem;
-  color: #fff;
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  pointer-events: none;
-`;
-
-const Legend = styled.div`
+  border: ${({ $selected, $isToday, $isPlaceholder }) => {
+    if ($isPlaceholder) return 'none';
+    if ($selected) return '2px solid #fff';
+    if ($isToday) return '1px solid #10b981';
+    return '1px solid transparent';
+  }};
+  box-shadow: ${({ $intensity, $isPlaceholder }) => {
+    if ($isPlaceholder || $intensity === 0) return 'none';
+    return 'inset 0 1px 1px rgba(255,255,255,0.1)';
+  }};
+  color: ${({ $intensity }) => ($intensity > 0.3 ? '#000' : '#71717a')};
+  font-size: 0.85rem;
+  font-weight: ${({ $selected, $isToday }) => ($selected || $isToday ? 'bold' : 'normal')};
+  cursor: ${({ $isPlaceholder }) => ($isPlaceholder ? 'default' : 'pointer')};
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 0.75rem;
-  color: #666;
-  justify-content: flex-end;
-  margin-top: 0.5rem;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  &:hover {
+    ${({ $isPlaceholder, $selected }) => !$isPlaceholder && `
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+      border-color: ${$selected ? '#fff' : '#34d399'};
+    `}
+  }
 `;
 
-const LegendSquare = styled.div<{ color: string }>`
+const LegendRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+`;
+
+const LegendText = styled.span`
+  font-size: 0.75rem;
+  color: #71717a;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+`;
+
+const LegendDots = styled.div`
+  display: flex;
+  gap: 4px;
+`;
+
+const LegendDot = styled.div<{ $color: string }>`
   width: 12px;
   height: 12px;
-  border-radius: 2px;
-  background-color: ${props => props.color};
+  border-radius: 3px;
+  background-color: ${props => props.$color};
 `;
 
-interface HeatmapLog {
+export interface HeatmapLog {
   log_date: string;
   mood_score: number;
   energy_level: number;
@@ -132,91 +158,118 @@ export function ActivityHeatmap({ logs, onSelectDate, selectedDate }: ActivityHe
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const handlePrevMonth = () => {
-    const prev = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
-    setCurrentMonth(prev);
+    setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
   };
 
   const handleNextMonth = () => {
-    const next = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1);
-    setCurrentMonth(next);
+    setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
   };
 
-  // Calendar logic
-  const year = currentMonth.getFullYear();
-  const month = currentMonth.getMonth();
-  const firstDay = new Date(year, month, 1).getDay();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const todayStr = useMemo(() => {
+    const d = new Date();
+    // Use local timezone format consistently
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }, []);
 
-  const days = [];
-  // Placeholders
-  for (let i = 0; i < firstDay; i++) {
-    days.push({ isPlaceholder: true, dateStr: '' });
-  }
-  // Actual days
-  for (let i = 1; i <= daysInMonth; i++) {
-    const dStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-    days.push({ isPlaceholder: false, dateStr: dStr });
-  }
+  const calendarDays = useMemo(() => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  const logMap = logs.reduce((acc, log) => {
-    acc[log.log_date] = log;
-    return acc;
-  }, {} as Record<string, HeatmapLog>);
+    const days = [];
+    for (let i = 0; i < firstDay; i++) {
+      days.push({ isPlaceholder: true, dateStr: '', dayNum: 0 });
+    }
+    for (let i = 1; i <= daysInMonth; i++) {
+      const dStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+      days.push({ isPlaceholder: false, dateStr: dStr, dayNum: i });
+    }
+    return days;
+  }, [currentMonth]);
+
+  const logMap = useMemo(() => {
+    return logs.reduce((acc, log) => {
+      acc[log.log_date] = log;
+      return acc;
+    }, {} as Record<string, HeatmapLog>);
+  }, [logs]);
 
   const monthName = currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' });
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   return (
     <HeatmapContainer>
-      <HeatmapHeader>
-        <NavButton onClick={handlePrevMonth}>&lt; Prev</NavButton>
-        <HeatmapTitle>{monthName}</HeatmapTitle>
-        <NavButton onClick={handleNextMonth}>Next &gt;</NavButton>
-      </HeatmapHeader>
+      <HeaderRow>
+        <MonthTitle>{monthName}</MonthTitle>
+        <NavControls>
+          <NavButton onClick={handlePrevMonth} aria-label="Previous Month">
+            <ChevronLeft size={18} />
+          </NavButton>
+          <NavButton onClick={handleNextMonth} aria-label="Next Month">
+            <ChevronRight size={18} />
+          </NavButton>
+        </NavControls>
+      </HeaderRow>
 
       <Grid>
-        {weekDays.map(d => <DayLabel key={d}>{d}</DayLabel>)}
+        <WeekdayLabelRow>
+          {weekDays.map(d => (
+            <DayLabel key={d}>{d[0]}</DayLabel>
+          ))}
+        </WeekdayLabelRow>
 
-        {days.map((day, idx) => {
+        {calendarDays.map((day, idx) => {
           if (day.isPlaceholder) {
-            return <DaySquare key={idx} $intensity={0} $isPlaceholder={true} $selected={false} />;
+            return (
+              <DayCellContainer key={idx}>
+                <DaySquare $intensity={0} $isPlaceholder={true} $selected={false} $isToday={false} disabled />
+              </DayCellContainer>
+            );
           }
 
           const log = logMap[day.dateStr];
           let intensity = 0;
-          let tooltip = day.dateStr;
 
           if (log) {
+            // Formula: weighted average of mood and energy
             const moodScore = log.mood_score / 10;
             const energyScore = log.energy_level / 10;
-            intensity = (moodScore * 0.5) + (energyScore * 0.5);
-            tooltip = `${day.dateStr}: Mood ${log.mood_score}/10 | Energy ${log.energy_level}/10`;
+            intensity = (moodScore * 0.6) + (energyScore * 0.4);
+            // Ensure minimum intensity > 0 if logged so it shows up differently than empty
+            if (intensity === 0) intensity = 0.1; 
           }
 
+          const isSelected = selectedDate === day.dateStr;
+          const isToday = todayStr === day.dateStr;
+
           return (
-            <DaySquare
-              key={idx}
-              $intensity={intensity}
-              $isPlaceholder={false}
-              $selected={selectedDate === day.dateStr}
-              data-tooltip={tooltip}
-              onClick={() => onSelectDate(day.dateStr)}
-            >
-              <DayNumber>{new Date(day.dateStr).getDate()}</DayNumber>
-            </DaySquare>
+            <DayCellContainer key={idx}>
+              <DaySquare
+                $intensity={intensity}
+                $isPlaceholder={false}
+                $selected={isSelected}
+                $isToday={isToday}
+                onClick={() => onSelectDate(day.dateStr)}
+              >
+                {day.dayNum}
+              </DaySquare>
+            </DayCellContainer>
           );
         })}
       </Grid>
 
-      <Legend>
-        Less
-        <LegendSquare color="#161b22" />
-        <LegendSquare color="#450a0a" />
-        <LegendSquare color="#b45309" />
-        <LegendSquare color="#0284c7" />
-        <LegendSquare color="#10b981" />
-        More
-      </Legend>
+      <LegendRow>
+        <LegendText>Less</LegendText>
+        <LegendDots>
+          <LegendDot $color="#18181b" />
+          <LegendDot $color="#064e3b" />
+          <LegendDot $color="#059669" />
+          <LegendDot $color="#10b981" />
+          <LegendDot $color="#34d399" />
+        </LegendDots>
+        <LegendText>More</LegendText>
+      </LegendRow>
     </HeatmapContainer>
   );
 }
