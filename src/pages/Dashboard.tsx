@@ -695,14 +695,14 @@ export function Dashboard() {
               </MissedDaysAlert>
             )}
             <FormHeader>
-              <CardTitle style={{ borderBottom: 'none', paddingBottom: 0, marginBottom: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', minWidth: 0 }}>
+              <CardTitle style={{ borderBottom: 'none', paddingBottom: 0, marginBottom: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0 }}>
                 {!isPastDay ? `Today — ${today}` : `Entry — ${selectedDate}`}
               </CardTitle>
               {activeDate === today && (
                 <SecondaryButton 
                   onClick={handleSameAsYesterday}
                   disabled={!yesterdayLog}
-                  style={{ width: 'auto', padding: '0.4rem 0.8rem', fontSize: '0.75rem', opacity: yesterdayLog ? 1 : 0.4 }}
+                  style={{ width: 'auto', padding: '0.4rem 0.8rem', fontSize: '0.75rem', opacity: yesterdayLog ? 1 : 0.4, flexShrink: 0, marginLeft: '0.5rem' }}
                 >
                   Same as Yesterday
                 </SecondaryButton>
