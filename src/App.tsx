@@ -7,7 +7,7 @@ import styled from 'styled-components';
 
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
-import { YearInPixels } from './pages/YearInPixels';
+// import { YearInPixels } from './pages/YearInPixels';
 import { Habits } from './pages/Habits';
 
 const AppShell = styled.div`
@@ -45,6 +45,7 @@ function App() {
               </AuthGuard>
             }
           />
+          {/*
           <Route
             path="/year"
             element={
@@ -56,6 +57,7 @@ function App() {
               </AuthGuard>
             }
           />
+          */}
         </Routes>
       </Suspense>
     </BrowserRouter>
