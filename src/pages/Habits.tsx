@@ -2,9 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { supabase } from '../lib/supabaseClient';
 import { Container, MainContent, Card, CardTitle } from '../components/common';
-import { Plus, Trash2, Check } from 'lucide-react';
-import { HabitHeatmap, type HabitLog } from '../components/HabitHeatmap';
-import { useSearchParams } from 'react-router-dom';
+import { Plus, Trash2, ChevronLeft, ChevronRight, Flame, Check } from 'lucide-react';
 
 /* ── Animations ────────────────────────────────────────────── */
 const fadeIn = keyframes`
@@ -13,29 +11,17 @@ const fadeIn = keyframes`
 `;
 
 /* ── Styled Components ─────────────────────────────────────── */
-const PageLayout = styled.div`
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 2rem;
-  width: 100%;
-
-  @media (min-width: 992px) {
-    grid-template-columns: 1.2fr 1fr;
-    align-items: start;
-  }
-`;
-
 const DashboardHeader = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  margin-bottom: 1.5rem;
+  gap: 1rem;
+  margin-bottom: 2rem;
   animation: ${fadeIn} 0.4s ease-out;
 
   @media (min-width: 768px) {
     flex-direction: row;
     justify-content: space-between;
-    align-items: flex-end;
+    align-items: center;
   }
 `;
 
@@ -53,27 +39,232 @@ const HeaderTitle = styled.h1`
   }
 `;
 
-const FormHeader = styled.div`
+const ControlsRow = styled.div`
   display: flex;
   align-items: center;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #222;
-  overflow: hidden;
-  width: 100%;
-  min-width: 0;
+  gap: 1rem;
+  flex-wrap: wrap;
 `;
 
-const ViewSection = styled.div`
+const MonthSelector = styled.div`
+  display: flex;
+  align-items: center;
+  background: #0b0b0b;
+  border: 1px solid #222;
+  border-radius: 4px;
+  padding: 0.25rem;
+`;
+
+const NavButton = styled.button`
+  background: none;
+  border: none;
+  color: #aaa;
+  cursor: pointer;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s;
+
+  &:hover {
+    color: #fff;
+  }
+`;
+
+const MonthLabel = styled.span`
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0 1rem;
+  min-width: 120px;
+  text-align: center;
+`;
+
+const AddHabitButton = styled.button`
+  background: #fff;
+  color: #000;
+  border: 1px solid #fff;
+  padding: 0.5rem 1rem;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #000;
+    color: #fff;
+  }
+`;
+
+const HabitsGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  width: 100%;
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (min-width: 1200px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+`;
+
+const HabitCard = styled(Card)<{ $color: string }>`
+  border: 1px solid #1f1f1f;
+  transition: border-color 0.3s ease, transform 0.2s ease;
+  position: relative;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   gap: 1.5rem;
+
+  &:hover {
+    border-color: ${props => props.$color}40;
+    transform: translateY(-2px);
+  }
+`;
+
+const HabitCardHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid #1f1f1f;
+  padding-bottom: 1rem;
+`;
+
+const HabitTitleContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+`;
+
+const HabitColorIndicator = styled.div<{ $color: string }>`
+  width: 24px;
+  height: 4px;
+  background-color: ${props => props.$color};
+  border-radius: 2px;
+`;
+
+const HabitCardName = styled.h3`
+  margin: 0;
+  font-size: 1.1rem;
+  color: #fff;
+  font-weight: 600;
+`;
+
+const DeleteButton = styled.button`
+  background: none;
+  border: none;
+  color: #444;
+  cursor: pointer;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s;
+
+  &:hover {
+    color: #f43f5e;
+  }
+`;
+
+/* ── Calendar Grid ── */
+const CalendarGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+`;
+
+const WeekdayLabel = styled.div`
+  text-align: center;
+  font-size: 0.65rem;
+  color: #555;
+  text-transform: uppercase;
+  font-weight: bold;
+  padding-bottom: 0.25rem;
+`;
+
+const DaySquare = styled.button<{ $ticked: boolean; $color: string; $isPlaceholder: boolean; $isToday: boolean }>`
+  aspect-ratio: 1;
+  width: 100%;
+  border-radius: 4px;
+  background-color: ${props => {
+    if (props.$isPlaceholder) return 'transparent';
+    return props.$ticked ? props.$color : '#111';
+  }};
+  border: ${props => {
+    if (props.$isPlaceholder) return 'none';
+    if (props.$isToday) return `1.5px solid ${props.$color}`;
+    return '1px solid #1f1f1f';
+  }};
+  color: ${props => (props.$ticked ? '#000' : '#888')};
+  font-size: 0.7rem;
+  font-weight: ${props => (props.$ticked || props.$isToday ? 'bold' : 'normal')};
+  cursor: ${props => (props.$isPlaceholder ? 'default' : 'pointer')};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  position: relative;
+
+  &:hover {
+    ${props => !props.$isPlaceholder && `
+      background-color: ${props.$ticked ? `${props.$color}dd` : '#1c1c1c'};
+      transform: scale(1.05);
+    `}
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+`;
+
+/* ── Habit Stats ── */
+const StatsRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   padding-top: 1rem;
+  border-top: 1px solid #1f1f1f;
+  gap: 1rem;
+`;
+
+const StatItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #888;
+  font-size: 0.75rem;
+
+  span {
+    color: #fff;
+    font-weight: bold;
+  }
+`;
+
+/* ── Form Modal/Dropdown ── */
+const AddFormContainer = styled(Card)`
+  margin-bottom: 2rem;
+  animation: ${fadeIn} 0.3s ease-out;
+  border: 1px solid #222;
 `;
 
 const Form = styled.form`
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.25rem;
+  max-width: 500px;
 `;
 
 const FormGroup = styled.div`
@@ -96,6 +287,7 @@ const Input = styled.input`
   padding: 0.6rem 0.8rem;
   font-family: inherit;
   font-size: 0.85rem;
+  border-radius: 4px;
   transition: border-color 0.2s;
 
   &:focus {
@@ -106,19 +298,21 @@ const Input = styled.input`
 
 const ColorGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(8, 1fr);
   gap: 0.5rem;
 `;
 
 const ColorBubble = styled.button<{ $color: string; $selected: boolean }>`
-  height: 32px;
+  aspect-ratio: 1;
+  width: 100%;
   background: ${props => props.$color};
   border: ${props => props.$selected ? '2px solid #fff' : '2px solid transparent'};
+  border-radius: 50%;
   cursor: pointer;
   transition: transform 0.1s;
 
   &:hover {
-    transform: scale(1.05);
+    transform: scale(1.1);
   }
 `;
 
@@ -137,6 +331,7 @@ const SubmitButton = styled.button`
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+  border-radius: 4px;
   transition: all 0.2s;
 
   &:hover {
@@ -152,69 +347,17 @@ const SubmitButton = styled.button`
   }
 `;
 
-const HabitItem = styled.div<{ $color: string }>`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.6rem;
-  background: #000;
-  border: 1px solid #111;
-  border-left: 3px solid ${props => props.$color};
-  margin-bottom: 0.5rem;
-`;
-
-const HabitName = styled.span`
-  font-size: 0.85rem;
-  color: #fff;
-`;
-
-const DeleteButton = styled.button`
-  background: none;
-  border: none;
-  color: #444;
-  cursor: pointer;
-  padding: 0.2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.15s;
-
-  &:hover {
-    color: #f43f5e;
-  }
-`;
-
-const CheckinItem = styled.div<{ $color: string; $checked: boolean; $isPastDay: boolean }>`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1.25rem 1.5rem;
-  background-color: #0b0b0b;
-  border: 2px solid ${props => props.$checked ? props.$color : '#333'};
-  transition: border-color 0.2s ease;
-  cursor: pointer;
-
-  &:hover {
-    border-color: ${props => props.$color};
-  }
-`;
-
-const CheckSquare = styled.div<{ $color: string; $checked: boolean }>`
-  width: 28px;
-  height: 28px;
-  background: ${props => props.$checked ? props.$color : 'transparent'};
-  border: 2px solid ${props => props.$checked ? props.$color : '#444'};
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #000;
-  transition: all 0.15s ease;
-`;
-
+/* ── Types ── */
 interface Habit {
   id: string;
   name: string;
   color: string;
+}
+
+export interface HabitLog {
+  id: string;
+  habit_id: string;
+  log_date: string;
 }
 
 const PRESET_COLORS = [
@@ -223,35 +366,27 @@ const PRESET_COLORS = [
 ];
 
 export function Habits() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const urlDate = searchParams.get('date');
-
   const [habits, setHabits] = useState<Habit[]>([]);
   const [logs, setLogs] = useState<HabitLog[]>([]);
   const [showForm, setShowForm] = useState(false);
+  
+  // Add habit fields
   const [name, setName] = useState('');
   const [color, setColor] = useState(PRESET_COLORS[0]);
   const [saving, setSaving] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(urlDate || '');
 
-  // Sync state with URL parameter
-  useEffect(() => {
-    let ignore = false;
-    const run = async () => {
-      await Promise.resolve();
-      if (!ignore && urlDate) {
-        setSelectedDate(urlDate);
-      }
-    };
-    run();
-    return () => {
-      ignore = true;
-    };
-  }, [urlDate]);
+  // Global Calendar Month State
+  const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  const today = new Date().toISOString().split('T')[0];
-  const isPastDay = !!(selectedDate && selectedDate !== today);
-  const activeDate = selectedDate || today;
+  const handlePrevMonth = () => {
+    setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+  };
+
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
 
   const fetchData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -265,13 +400,13 @@ export function Habits() {
     
     if (habitsData) setHabits(habitsData);
 
-    // Fetch logs (last 90 days to populate heatmap)
-    const ninetyDaysAgo = new Date();
-    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+    // Fetch logs (last 180 days to populate current/adjacent months)
+    const startRange = new Date();
+    startRange.setDate(startRange.getDate() - 180);
     const { data: logsData } = await supabase
       .from('habit_logs')
       .select('id, habit_id, log_date')
-      .gte('log_date', ninetyDaysAgo.toISOString().split('T')[0]);
+      .gte('log_date', startRange.toISOString().split('T')[0]);
 
     if (logsData) setLogs(logsData);
   }, []);
@@ -310,25 +445,20 @@ export function Habits() {
     }
   };
 
-  const handleDateSelect = (dateStr: string) => {
-    setSelectedDate(dateStr);
-    setSearchParams({ date: dateStr });
-  };
-
-  const handleToggleLog = async (habitId: string) => {
-    const existingLog = logs.find(l => l.habit_id === habitId && l.log_date === activeDate);
+  const handleToggleLog = async (habitId: string, dateStr: string) => {
+    const existingLog = logs.find(l => l.habit_id === habitId && l.log_date === dateStr);
 
     if (existingLog) {
-      setLogs(logs.filter(l => l.id !== existingLog.id));
+      setLogs(prev => prev.filter(l => l.id !== existingLog.id));
       const { error } = await supabase.from('habit_logs').delete().eq('id', existingLog.id);
       if (error) fetchData(); // rollback
     } else {
       const tempId = crypto.randomUUID();
-      const newLog = { id: tempId, habit_id: habitId, log_date: activeDate };
-      setLogs([...logs, newLog]);
+      const newLog = { id: tempId, habit_id: habitId, log_date: dateStr };
+      setLogs(prev => [...prev, newLog]);
       const { data, error } = await supabase
         .from('habit_logs')
-        .insert({ habit_id: habitId, log_date: activeDate })
+        .insert({ habit_id: habitId, log_date: dateStr })
         .select();
       
       if (error) {
@@ -339,7 +469,28 @@ export function Habits() {
     }
   };
 
-  const logsMap = useMemo(() => {
+  // Build calendar matrix info for the selected month
+  const calendarDays = useMemo(() => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const firstDayIndex = new Date(year, month, 1).getDay();
+    const totalDays = new Date(year, month + 1, 0).getDate();
+
+    const result = [];
+    // Placeholders
+    for (let i = 0; i < firstDayIndex; i++) {
+      result.push({ isPlaceholder: true, dateStr: '', dayNum: 0 });
+    }
+    // Days of month
+    for (let i = 1; i <= totalDays; i++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+      result.push({ isPlaceholder: false, dateStr, dayNum: i });
+    }
+    return result;
+  }, [currentMonth]);
+
+  // Index logs by habit_id and log_date for O(1) checks
+  const tickedMap = useMemo(() => {
     const map: Record<string, boolean> = {};
     logs.forEach(l => {
       map[`${l.habit_id}_${l.log_date}`] = true;
@@ -347,138 +498,185 @@ export function Habits() {
     return map;
   }, [logs]);
 
+  // Helper stats computation
+  const getHabitStats = useCallback((habitId: string) => {
+    // 1. Completion Rate for the current visible month
+    const activeDays = calendarDays.filter(d => !d.isPlaceholder);
+    const completedInMonth = activeDays.filter(d => tickedMap[`${habitId}_${d.dateStr}`]).length;
+    const rate = activeDays.length ? Math.round((completedInMonth / activeDays.length) * 100) : 0;
+
+    // 2. Current streak (consecutive days leading backwards from today/yesterday)
+    let currentStreak = 0;
+    const checkDate = new Date();
+    
+    // Start checking from today, go backwards
+    for (let i = 0; i < 90; i++) {
+      const dStr = checkDate.toISOString().split('T')[0];
+      if (tickedMap[`${habitId}_${dStr}`]) {
+        currentStreak++;
+      } else {
+        // If they missed today, they can still continue yesterday's streak
+        if (i === 0) {
+          const yesterday = new Date(checkDate);
+          yesterday.setDate(yesterday.getDate() - 1);
+          const yStr = yesterday.toISOString().split('T')[0];
+          if (tickedMap[`${habitId}_${yStr}`]) {
+            checkDate.setDate(checkDate.getDate() - 1);
+            currentStreak++;
+            continue;
+          }
+        }
+        break;
+      }
+      checkDate.setDate(checkDate.getDate() - 1);
+    }
+
+    return { completedInMonth, totalInMonth: activeDays.length, rate, streak: currentStreak };
+  }, [calendarDays, tickedMap]);
+
+  const monthLabel = currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' });
+  const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
   return (
     <Container>
       <MainContent>
         <DashboardHeader>
-          <div>
-            <HeaderTitle>
-              Habit <span>Tracker</span>
-            </HeaderTitle>
-          </div>
+          <HeaderTitle>
+            Habit <span>Tracker</span>
+          </HeaderTitle>
+
+          <ControlsRow>
+            <MonthSelector>
+              <NavButton onClick={handlePrevMonth} aria-label="Previous month">
+                <ChevronLeft size={16} />
+              </NavButton>
+              <MonthLabel>{monthLabel}</MonthLabel>
+              <NavButton onClick={handleNextMonth} aria-label="Next month">
+                <ChevronRight size={16} />
+              </NavButton>
+            </MonthSelector>
+
+            {!showForm && (
+              <AddHabitButton onClick={() => setShowForm(true)}>
+                <Plus size={16} /> Add Habit
+              </AddHabitButton>
+            )}
+          </ControlsRow>
         </DashboardHeader>
 
-        <PageLayout>
-          {/* Left Column Stack */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', width: '100%' }}>
-            {/* Heatmap */}
-            <Card>
-              <HabitHeatmap
-                logs={logs}
-                totalHabits={habits.length}
-                onSelectDate={handleDateSelect}
-                selectedDate={selectedDate}
-              />
-            </Card>
-
-            {/* Manage Habits */}
-            <Card>
-              <CardTitle style={{ borderBottom: '1px solid #222', paddingBottom: '0.75rem', marginBottom: '1rem' }}>
-                Manage Habits
-              </CardTitle>
-              
-              {!showForm ? (
-                <SubmitButton type="button" onClick={() => setShowForm(true)} style={{ marginBottom: '1rem' }}>
-                  <Plus size={16} />
-                  Add Habit
-                </SubmitButton>
-              ) : (
-                <Form onSubmit={handleCreateHabit} style={{ marginBottom: '1rem', padding: '1rem', border: '1px solid #333' }}>
-                  <FormGroup>
-                    <Label htmlFor="habit-name">Name</Label>
-                    <Input
-                      id="habit-name"
-                      type="text"
-                      placeholder="e.g. Drink Water"
-                      value={name}
-                      onChange={e => setName(e.target.value)}
-                      maxLength={50}
-                      required
-                    />
-                  </FormGroup>
-                  <FormGroup>
-                    <Label>Color Preset</Label>
-                    <ColorGrid>
-                      {PRESET_COLORS.map(c => (
-                        <ColorBubble
-                          key={c}
-                          type="button"
-                          $color={c}
-                          $selected={color === c}
-                          onClick={() => setColor(c)}
-                        />
-                      ))}
-                    </ColorGrid>
-                  </FormGroup>
-                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                    <SubmitButton type="submit" disabled={saving || !name.trim()} style={{ flex: 1 }}>
-                      Save
-                    </SubmitButton>
-                    <SubmitButton
+        {showForm && (
+          <AddFormContainer>
+            <CardTitle style={{ borderBottom: '1px solid #1f1f1f', paddingBottom: '0.75rem', marginBottom: '1.25rem' }}>
+              Create New Habit
+            </CardTitle>
+            <Form onSubmit={handleCreateHabit}>
+              <FormGroup>
+                <Label htmlFor="habit-name">Habit Name</Label>
+                <Input
+                  id="habit-name"
+                  type="text"
+                  placeholder="e.g. Meditate, Run 5k, Study Spanish"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  maxLength={50}
+                  required
+                />
+              </FormGroup>
+              <FormGroup>
+                <Label>Choose Theme Color</Label>
+                <ColorGrid>
+                  {PRESET_COLORS.map(c => (
+                    <ColorBubble
+                      key={c}
                       type="button"
-                      style={{ flex: 1, background: 'transparent', color: '#888', borderColor: '#222' }}
-                      onClick={() => { setShowForm(false); setName(''); }}
-                    >
-                      Cancel
-                    </SubmitButton>
-                  </div>
-                </Form>
-              )}
-
-              <div>
-                {habits.length === 0 ? (
-                  <span style={{ fontSize: '0.75rem', color: '#555' }}>No habits configured.</span>
-                ) : (
-                  habits.map(h => (
-                    <HabitItem key={h.id} $color={h.color}>
-                      <HabitName>{h.name}</HabitName>
-                      <DeleteButton onClick={() => handleDeleteHabit(h.id)} aria-label={`Delete ${h.name}`}>
-                        <Trash2 size={14} />
-                      </DeleteButton>
-                    </HabitItem>
-                  ))
-                )}
+                      $color={c}
+                      $selected={color === c}
+                      onClick={() => setColor(c)}
+                    />
+                  ))}
+                </ColorGrid>
+              </FormGroup>
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <SubmitButton type="submit" disabled={saving || !name.trim()} style={{ width: '120px' }}>
+                  Save
+                </SubmitButton>
+                <SubmitButton
+                  type="button"
+                  style={{ width: '120px', background: 'transparent', color: '#888', borderColor: '#222' }}
+                  onClick={() => { setShowForm(false); setName(''); }}
+                >
+                  Cancel
+                </SubmitButton>
               </div>
-            </Card>
+            </Form>
+          </AddFormContainer>
+        )}
+
+        {habits.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '4rem 2rem', color: '#666', border: '1px dashed #222' }}>
+            No habits created yet. Click "Add Habit" above to get started!
           </div>
+        ) : (
+          <HabitsGrid>
+            {habits.map(h => {
+              const stats = getHabitStats(h.id);
+              return (
+                <HabitCard key={h.id} $color={h.color}>
+                  <div>
+                    <HabitCardHeader>
+                      <HabitTitleContainer>
+                        <HabitColorIndicator $color={h.color} />
+                        <HabitCardName>{h.name}</HabitCardName>
+                      </HabitTitleContainer>
+                      <DeleteButton onClick={() => handleDeleteHabit(h.id)} aria-label={`Delete ${h.name}`}>
+                        <Trash2 size={16} />
+                      </DeleteButton>
+                    </HabitCardHeader>
 
-          {/* Right Column (Data Entry) */}
-          <Card>
-            <FormHeader>
-              <CardTitle style={{ borderBottom: 'none', paddingBottom: 0, marginBottom: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', minWidth: 0 }}>
-                {!isPastDay ? `Today — ${today}` : `Entry — ${selectedDate}`}
-              </CardTitle>
-            </FormHeader>
+                    <CalendarGrid style={{ marginTop: '1.25rem' }}>
+                      {weekDays.map(day => (
+                        <WeekdayLabel key={day}>{day[0]}</WeekdayLabel>
+                      ))}
 
-            <ViewSection>
-              {habits.length === 0 ? (
-                <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
-                  No habits to check in. Add some on the left!
-                </div>
-              ) : (
-                habits.map(h => {
-                  const isChecked = !!logsMap[`${h.id}_${activeDate}`];
-                  return (
-                    <CheckinItem 
-                      key={h.id} 
-                      $color={h.color} 
-                      $checked={isChecked}
-                      $isPastDay={isPastDay}
-                      onClick={() => handleToggleLog(h.id)}
-                    >
-                      <span style={{ fontSize: '1rem', color: isChecked ? '#fff' : '#ccc', fontWeight: isChecked ? 'bold' : 'normal' }}>
-                        {h.name}
-                      </span>
-                      <CheckSquare $color={h.color} $checked={isChecked}>
-                        {isChecked && <Check size={16} />}
-                      </CheckSquare>
-                    </CheckinItem>
-                  );
-                })
-              )}
-            </ViewSection>
-          </Card>
-        </PageLayout>
+                      {calendarDays.map((day, idx) => {
+                        const ticked = tickedMap[`${h.id}_${day.dateStr}`];
+                        const isToday = day.dateStr === todayStr;
+
+                        return (
+                          <DaySquare
+                            key={idx}
+                            $ticked={ticked}
+                            $color={h.color}
+                            $isPlaceholder={day.isPlaceholder}
+                            $isToday={isToday}
+                            onClick={() => !day.isPlaceholder && handleToggleLog(h.id, day.dateStr)}
+                            disabled={day.isPlaceholder}
+                            aria-label={day.isPlaceholder ? undefined : `${day.dateStr} - ${ticked ? 'Completed' : 'Not completed'}`}
+                          >
+                            {!day.isPlaceholder && (
+                              ticked ? <Check size={12} /> : day.dayNum
+                            )}
+                          </DaySquare>
+                        );
+                      })}
+                    </CalendarGrid>
+                  </div>
+
+                  <StatsRow>
+                    <StatItem>
+                      <Check size={14} style={{ color: h.color }} />
+                      Month: <span>{stats.rate}%</span> ({stats.completedInMonth}/{stats.totalInMonth})
+                    </StatItem>
+                    <StatItem>
+                      <Flame size={14} style={{ color: stats.streak > 0 ? '#f97316' : '#555' }} />
+                      Streak: <span>{stats.streak}d</span>
+                    </StatItem>
+                  </StatsRow>
+                </HabitCard>
+              );
+            })}
+          </HabitsGrid>
+        )}
       </MainContent>
     </Container>
   );
