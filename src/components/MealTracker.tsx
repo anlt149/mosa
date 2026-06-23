@@ -164,6 +164,7 @@ interface MealTrackerProps {
 }
 
 export function MealTracker({ onMealLogged }: MealTrackerProps) {
+  const [mealName, setMealName] = useState('');
   const [locationType, setLocationType] = useState<'eat_out' | 'eat_home'>('eat_home');
   const [costInput, setCostInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -184,6 +185,11 @@ export function MealTracker({ onMealLogged }: MealTrackerProps) {
   };
 
   const handleSubmit = async () => {
+    if (!mealName.trim()) {
+      setError('Please enter a meal name');
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       setError(null);
@@ -193,7 +199,7 @@ export function MealTracker({ onMealLogged }: MealTrackerProps) {
         costValue = parseInt(costInput.replace(/\D/g, ''), 10);
       }
       
-      await mealService.logMeal(locationType, costValue);
+      await mealService.logMeal(mealName.trim(), locationType, costValue);
       
       setSuccess(true);
       if (onMealLogged) {
@@ -201,6 +207,7 @@ export function MealTracker({ onMealLogged }: MealTrackerProps) {
       }
       setTimeout(() => {
         setSuccess(false);
+        setMealName('');
         setCostInput('');
         setLocationType('eat_home');
       }, 2000);
@@ -218,6 +225,19 @@ export function MealTracker({ onMealLogged }: MealTrackerProps) {
         <UtensilsCrossed size={20} />
         Log a Meal
       </Header>
+
+      <InputGroup>
+        <Label>Meal Name</Label>
+        <StyledInput 
+          type="text" 
+          placeholder="e.g. Breakfast, Phở, Sushi..." 
+          value={mealName}
+          onChange={(e) => {
+            setMealName(e.target.value);
+            if (error) setError(null);
+          }}
+        />
+      </InputGroup>
 
       <ButtonGroup>
         <OptionButton 

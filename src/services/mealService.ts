@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabaseClient';
 export interface Meal {
   id: string;
   user_id: string;
+  meal_name: string;
   location_type: 'eat_out' | 'eat_home';
   cost_vnd: number | null;
   created_at: string;
@@ -10,6 +11,7 @@ export interface Meal {
 
 export const mealService = {
   async logMeal(
+    mealName: string,
     locationType: 'eat_out' | 'eat_home',
     costVnd?: number
   ): Promise<Meal> {
@@ -20,6 +22,7 @@ export const mealService = {
       .from('meals')
       .insert({
         user_id: user.id,
+        meal_name: mealName,
         location_type: locationType,
         cost_vnd: costVnd || null,
       })

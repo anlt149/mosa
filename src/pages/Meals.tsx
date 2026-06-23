@@ -189,10 +189,10 @@ export function Meals() {
                     </HistoryIconWrapper>
                     <HistoryContent>
                       <HistoryType>
-                        {meal.location_type === 'eat_out' ? 'Ate Out' : 'Ate at Home'}
+                        {meal.meal_name || (meal.location_type === 'eat_out' ? 'Ate Out' : 'Ate at Home')}
                       </HistoryType>
                       <HistoryDate>
-                        {new Date(meal.created_at).toLocaleString()}
+                        {meal.location_type === 'eat_out' ? 'Eat Out' : 'Eat at Home'} &bull; {new Date(meal.created_at).toLocaleString()}
                       </HistoryDate>
                     </HistoryContent>
                     {meal.location_type === 'eat_out' && meal.cost_vnd != null && (
