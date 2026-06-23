@@ -1,7 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
-import { Camera, Upload, Home, UtensilsCrossed, Loader2, CheckCircle2 } from 'lucide-react';
-import { resizeImage } from '../utils/imageUtils';
+import { Home, UtensilsCrossed, Loader2, CheckCircle2 } from 'lucide-react';
 import { mealService } from '../services/mealService';
 
 const Card = styled.div`
@@ -77,40 +76,51 @@ const OptionButton = styled.button<{ $active: boolean; $type: 'eat_home' | 'eat_
   }
 `;
 
-const ImagePreviewContainer = styled.div`
-  width: 100%;
-  height: 200px;
-  border-radius: 12px;
-  border: 1px dashed #3f3f46;
-  background: #18181b;
+const InputGroup = styled.div`
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  gap: 0.5rem;
   margin-bottom: 1.5rem;
-  position: relative;
-  overflow: hidden;
-  cursor: pointer;
-
-  &:hover {
-    border-color: #52525b;
-  }
-
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
 `;
 
-const HiddenInput = styled.input`
-  display: none;
-`;
-
-const UploadText = styled.span`
+const Label = styled.label`
   color: #a1a1aa;
   font-size: 0.9rem;
-  margin-top: 0.5rem;
+  font-weight: 500;
+`;
+
+const InputWrapper = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+`;
+
+const CurrencySymbol = styled.span`
+  position: absolute;
+  right: 1rem;
+  color: #a1a1aa;
+  font-weight: 500;
+  pointer-events: none;
+`;
+
+const StyledInput = styled.input`
+  width: 100%;
+  background: #18181b;
+  border: 1px solid #3f3f46;
+  border-radius: 8px;
+  padding: 0.875rem 3rem 0.875rem 1rem;
+  color: #fff;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+
+  &:focus {
+    outline: none;
+    border-color: #f97316;
+  }
+  
+  &::placeholder {
+    color: #52525b;
+  }
 `;
 
 const SubmitButton = styled.button`
@@ -155,29 +165,22 @@ interface MealTrackerProps {
 
 export function MealTracker({ onMealLogged }: MealTrackerProps) {
   const [locationType, setLocationType] = useState<'eat_out' | 'eat_home'>('eat_home');
-  const [photoBlob, setPhotoBlob] = useState<Blob | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [costInput, setCostInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handlePhotoCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      // Resize to max 1024x1024
-      const resizedBlob = await resizeImage(file, 1024, 1024);
-      setPhotoBlob(resizedBlob);
-      
-      // Create local preview URL
-      const objectUrl = URL.createObjectURL(resizedBlob);
-      setPreviewUrl(objectUrl);
-    } catch (err) {
-      console.error('Error processing image:', err);
-      setError('Failed to process image');
+  const handleCostChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Strip non-digits
+    const rawValue = e.target.value.replace(/\D/g, '');
+    if (!rawValue) {
+      setCostInput('');
+      return;
     }
+    
+    // Format with commas
+    const formatted = parseInt(rawValue, 10).toLocaleString('en-US');
+    setCostInput(formatted);
   };
 
   const handleSubmit = async () => {
@@ -185,9 +188,12 @@ export function MealTracker({ onMealLogged }: MealTrackerProps) {
       setIsSubmitting(true);
       setError(null);
       
-      const filename = photoBlob ? `meal-photo-${Date.now()}.jpg` : undefined;
+      let costValue: number | undefined = undefined;
+      if (locationType === 'eat_out' && costInput) {
+        costValue = parseInt(costInput.replace(/\D/g, ''), 10);
+      }
       
-      await mealService.uploadImageAndLogMeal(locationType, photoBlob, filename);
+      await mealService.logMeal(locationType, costValue);
       
       setSuccess(true);
       if (onMealLogged) {
@@ -195,9 +201,9 @@ export function MealTracker({ onMealLogged }: MealTrackerProps) {
       }
       setTimeout(() => {
         setSuccess(false);
-        setPhotoBlob(null);
-        setPreviewUrl(null);
-      }, 3000);
+        setCostInput('');
+        setLocationType('eat_home');
+      }, 2000);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to log meal';
       setError(errorMessage);
@@ -217,7 +223,10 @@ export function MealTracker({ onMealLogged }: MealTrackerProps) {
         <OptionButton 
           $active={locationType === 'eat_home'} 
           $type="eat_home"
-          onClick={() => setLocationType('eat_home')}
+          onClick={() => {
+            setLocationType('eat_home');
+            setCostInput('');
+          }}
         >
           <Home size={24} />
           Eat at Home
@@ -232,24 +241,21 @@ export function MealTracker({ onMealLogged }: MealTrackerProps) {
         </OptionButton>
       </ButtonGroup>
 
-      <ImagePreviewContainer onClick={() => fileInputRef.current?.click()}>
-        {previewUrl ? (
-          <img src={previewUrl} alt="Meal preview" />
-        ) : (
-          <>
-            <Camera size={32} color="#a1a1aa" />
-            <UploadText>Tap to take a photo</UploadText>
-          </>
-        )}
-      </ImagePreviewContainer>
-      
-      <HiddenInput 
-        type="file" 
-        accept="image/*" 
-        capture="environment"
-        ref={fileInputRef}
-        onChange={handlePhotoCapture}
-      />
+      {locationType === 'eat_out' && (
+        <InputGroup>
+          <Label>Cost</Label>
+          <InputWrapper>
+            <StyledInput 
+              type="text" 
+              inputMode="numeric"
+              placeholder="e.g. 150,000" 
+              value={costInput}
+              onChange={handleCostChange}
+            />
+            <CurrencySymbol>VND</CurrencySymbol>
+          </InputWrapper>
+        </InputGroup>
+      )}
 
       {error && (
         <div style={{ color: '#ef4444', marginBottom: '1rem', fontSize: '0.9rem', textAlign: 'center' }}>
@@ -267,11 +273,11 @@ export function MealTracker({ onMealLogged }: MealTrackerProps) {
           {isSubmitting ? (
             <>
               <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} />
-              Uploading...
+              Saving...
             </>
           ) : (
             <>
-              <Upload size={18} />
+              <CheckCircle2 size={18} />
               Save Meal
             </>
           )}

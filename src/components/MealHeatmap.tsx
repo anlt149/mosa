@@ -79,7 +79,6 @@ const DaySquare = styled.button<{
   $isPlaceholder: boolean;
   $selected: boolean;
   $isToday: boolean;
-  $bgImage?: string | null;
   $locationType?: 'eat_out' | 'eat_home' | null;
 }>`
   width: 100%;
@@ -91,9 +90,6 @@ const DaySquare = styled.button<{
     if ($locationType === 'eat_out') return '#f97316'; // Orange
     return '#18181b'; // Empty
   }};
-  background-image: ${({ $bgImage }) => ($bgImage ? `url(${$bgImage})` : 'none')};
-  background-size: cover;
-  background-position: center;
   
   border: ${({ $selected, $isToday, $isPlaceholder }) => {
     if ($isPlaceholder) return 'none';
@@ -102,19 +98,14 @@ const DaySquare = styled.button<{
     return '1px solid transparent';
   }};
   
-  /* Dim text slightly if there's an image, or use different colors depending on bg */
-  color: ${({ $bgImage, $locationType }) => {
-    if ($bgImage) return 'transparent'; // Hide day number if there's an image, or make it white text with shadow? Let's hide it or make it white.
+  /* Use different colors depending on bg */
+  color: ${({ $locationType }) => {
     if ($locationType) return '#000'; // Dark text on colored background
     return '#71717a'; // Gray text on empty background
   }};
   
-  /* Text shadow to make day number readable if we decide to show it over images */
-  text-shadow: ${({ $bgImage }) => ($bgImage ? '0px 1px 3px rgba(0,0,0,0.8)' : 'none')};
-  ${({ $bgImage }) => $bgImage && 'color: #fff; font-weight: bold;'}
-
   font-size: 0.85rem;
-  font-weight: ${({ $selected, $isToday, $bgImage }) => ($selected || $isToday || $bgImage ? 'bold' : 'normal')};
+  font-weight: ${({ $selected, $isToday }) => ($selected || $isToday ? 'bold' : 'normal')};
   cursor: ${({ $isPlaceholder }) => ($isPlaceholder ? 'default' : 'pointer')};
   display: flex;
   align-items: center;
@@ -256,12 +247,10 @@ export function MealHeatmap({ meals, onSelectDate, selectedDate }: MealHeatmapPr
           }
 
           const dayMeals = mealsByDate[day.dateStr] || [];
-          // Strategy: pick the first meal's location or photo, or maybe the one with a photo if multiple exist
-          const mealWithPhoto = dayMeals.find(m => m.image_url);
-          const primaryMeal = mealWithPhoto || dayMeals[0];
+          // Strategy: pick the first meal's location
+          const primaryMeal = dayMeals[0];
 
           const locationType = primaryMeal?.location_type;
-          const bgImage = primaryMeal?.image_url;
           
           const isSelected = selectedDate === day.dateStr;
           const isToday = todayStr === day.dateStr;
@@ -273,10 +262,9 @@ export function MealHeatmap({ meals, onSelectDate, selectedDate }: MealHeatmapPr
                 $selected={isSelected}
                 $isToday={isToday}
                 $locationType={locationType}
-                $bgImage={bgImage}
                 onClick={() => onSelectDate(day.dateStr)}
               >
-                {!bgImage && day.dayNum}
+                {day.dayNum}
               </DaySquare>
             </DayCellContainer>
           );

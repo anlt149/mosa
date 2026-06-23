@@ -90,12 +90,15 @@ const HistoryItem = styled.div`
   gap: 1rem;
 `;
 
-const HistoryImage = styled.img`
-  width: 60px;
-  height: 60px;
-  border-radius: 8px;
-  object-fit: cover;
-  background: #27272a;
+const HistoryIconWrapper = styled.div<{ $type: 'eat_out' | 'eat_home' }>`
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: ${({ $type }) => $type === 'eat_home' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(249, 115, 22, 0.1)'};
+  color: ${({ $type }) => $type === 'eat_home' ? '#10b981' : '#f97316'};
 `;
 
 const HistoryContent = styled.div`
@@ -115,6 +118,14 @@ const HistoryDate = styled.span`
   color: #a1a1aa;
   font-size: 0.85rem;
 `;
+
+const HistoryCost = styled.span`
+  color: #f97316;
+  font-weight: 600;
+  font-size: 1.1rem;
+`;
+
+import { Home, UtensilsCrossed } from 'lucide-react';
 
 export function Meals() {
   const [recentMeals, setRecentMeals] = useState<Meal[]>([]);
@@ -173,11 +184,9 @@ export function Meals() {
               <HistoryList>
                 {(selectedDate ? allMeals.filter(m => m.created_at.startsWith(selectedDate)) : recentMeals).map((meal) => (
                   <HistoryItem key={meal.id}>
-                    {meal.image_url ? (
-                      <HistoryImage src={meal.image_url} alt="Meal" loading="lazy" />
-                    ) : (
-                      <div style={{ width: 60, height: 60, borderRadius: 8, background: '#27272a' }} />
-                    )}
+                    <HistoryIconWrapper $type={meal.location_type}>
+                      {meal.location_type === 'eat_home' ? <Home size={24} /> : <UtensilsCrossed size={24} />}
+                    </HistoryIconWrapper>
                     <HistoryContent>
                       <HistoryType>
                         {meal.location_type === 'eat_out' ? 'Ate Out' : 'Ate at Home'}
@@ -186,6 +195,9 @@ export function Meals() {
                         {new Date(meal.created_at).toLocaleString()}
                       </HistoryDate>
                     </HistoryContent>
+                    {meal.location_type === 'eat_out' && meal.cost_vnd != null && (
+                      <HistoryCost>{meal.cost_vnd.toLocaleString('en-US')} ₫</HistoryCost>
+                    )}
                   </HistoryItem>
                 ))}
               </HistoryList>
