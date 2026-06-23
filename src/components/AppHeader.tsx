@@ -264,6 +264,12 @@ export function AppHeader({ onLogout }: AppHeaderProps) {
         >
           Habits
         </NavTabButton>
+        <NavTabButton
+          $active={location.pathname === '/meals'}
+          onClick={() => handleNavigate('/meals')}
+        >
+          Meals
+        </NavTabButton>
         {/*
         <NavTabButton
           $active={location.pathname === '/year'}

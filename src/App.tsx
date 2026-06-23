@@ -9,6 +9,7 @@ import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 // import { YearInPixels } from './pages/YearInPixels';
 import { Habits } from './pages/Habits';
+import { Meals } from './pages/Meals';
 
 const AppShell = styled.div`
   display: flex;
@@ -41,6 +42,17 @@ function App() {
                 <AppShell>
                   <AppHeader />
                   <Habits />
+                </AppShell>
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/meals"
+            element={
+              <AuthGuard>
+                <AppShell>
+                  <AppHeader />
+                  <Meals />
                 </AppShell>
               </AuthGuard>
             }
