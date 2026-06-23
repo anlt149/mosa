@@ -41,24 +41,39 @@ const ButtonGroup = styled.div`
   margin-bottom: 1.5rem;
 `;
 
-const OptionButton = styled.button<{ $active: boolean }>`
+const OptionButton = styled.button<{ $active: boolean; $type: 'eat_home' | 'eat_out' }>`
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  background: ${({ $active }) => $active ? 'rgba(16, 185, 129, 0.1)' : '#18181b'};
-  border: 1px solid ${({ $active }) => $active ? '#10b981' : '#27272a'};
-  color: ${({ $active }) => $active ? '#10b981' : '#a1a1aa'};
+  background: ${({ $active, $type }) => {
+    if (!$active) return '#18181b';
+    return $type === 'eat_home' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(249, 115, 22, 0.1)';
+  }};
+  border: 1px solid ${({ $active, $type }) => {
+    if (!$active) return '#27272a';
+    return $type === 'eat_home' ? '#10b981' : '#f97316';
+  }};
+  color: ${({ $active, $type }) => {
+    if (!$active) return '#a1a1aa';
+    return $type === 'eat_home' ? '#10b981' : '#f97316';
+  }};
   padding: 1rem;
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.2s ease;
 
   &:hover {
-    background: ${({ $active }) => $active ? 'rgba(16, 185, 129, 0.15)' : '#27272a'};
-    color: ${({ $active }) => $active ? '#10b981' : '#fff'};
+    background: ${({ $active, $type }) => {
+      if (!$active) return '#27272a';
+      return $type === 'eat_home' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(249, 115, 22, 0.15)';
+    }};
+    color: ${({ $active, $type }) => {
+      if (!$active) return '#fff';
+      return $type === 'eat_home' ? '#10b981' : '#f97316';
+    }};
   }
 `;
 
@@ -201,6 +216,7 @@ export function MealTracker({ onMealLogged }: MealTrackerProps) {
       <ButtonGroup>
         <OptionButton 
           $active={locationType === 'eat_home'} 
+          $type="eat_home"
           onClick={() => setLocationType('eat_home')}
         >
           <Home size={24} />
@@ -208,6 +224,7 @@ export function MealTracker({ onMealLogged }: MealTrackerProps) {
         </OptionButton>
         <OptionButton 
           $active={locationType === 'eat_out'} 
+          $type="eat_out"
           onClick={() => setLocationType('eat_out')}
         >
           <UtensilsCrossed size={24} />
