@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { MealTracker } from '../components/MealTracker';
 import { MealHeatmap } from '../components/MealHeatmap';

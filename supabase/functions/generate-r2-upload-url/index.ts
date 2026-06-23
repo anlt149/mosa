@@ -54,6 +54,73 @@ serve(async (req) => {
       });
     }
 
+    // --- RATE LIMITING LOGIC ---
+    // Calculate timestamp for 1 hour ago
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+
+    // Query recent upload requests
+    const { count, error: countError } = await supabaseClient
+      .from('upload_requests')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .gte('created_at', oneHourAgo);
+
+    if (countError) {
+      console.error('Rate limit check failed:', countError);
+    } else if (count !== null && count >= 10) {
+      // User has hit the rate limit (10 per hour). Check if we should alert the admin.
+      const { data: recentAlerts } = await supabaseClient
+        .from('admin_alerts')
+        .select('*')
+        .eq('alert_type', 'high_upload_traffic')
+        .eq('user_id', user.id)
+        .gte('created_at', oneHourAgo)
+        .limit(1);
+
+      // If no alert sent in the last hour for this user, send one.
+      if (!recentAlerts || recentAlerts.length === 0) {
+        const resendApiKey = Deno.env.get('RESEND_API_KEY');
+        const adminEmail = Deno.env.get('ADMIN_EMAIL');
+
+        if (resendApiKey && adminEmail) {
+          try {
+            await fetch('https://api.resend.com/emails', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${resendApiKey}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                from: 'security@yourdomain.com', // Replace with a verified domain later if needed
+                to: adminEmail,
+                subject: 'High Traffic Upload Alert',
+                html: `<p>User <strong>${user.id}</strong> has attempted to request more than 10 upload URLs in the last hour.</p><p>They have been rate limited automatically.</p>`
+              })
+            });
+            // Log that an alert was sent
+            await supabaseClient.from('admin_alerts').insert({
+              alert_type: 'high_upload_traffic',
+              user_id: user.id
+            });
+          } catch (e) {
+            console.error('Failed to send Resend alert:', e);
+          }
+        } else {
+          console.error('RESEND_API_KEY or ADMIN_EMAIL missing. Could not send alert.');
+        }
+      }
+
+      // Reject the user request
+      return new Response(JSON.stringify({ error: 'Rate limit exceeded. Try again in an hour.' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 429,
+      });
+    }
+
+    // Log the successful request
+    await supabaseClient.from('upload_requests').insert({ user_id: user.id });
+    // --- END RATE LIMITING LOGIC ---
+
     const aws = new AwsClient({
       accessKeyId,
       secretAccessKey,
@@ -69,7 +136,7 @@ serve(async (req) => {
 
     // 3. Generate Pre-signed URL
     const url = new URL(objectUrl);
-    url.searchParams.set('X-Amz-Expires', '3600');
+    url.searchParams.set('X-Amz-Expires', '60'); // Expires in 60 seconds
 
     const signedRequest = await aws.sign(url, {
       method: 'PUT',
