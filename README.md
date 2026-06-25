@@ -1,11 +1,23 @@
-# Mood & Energy Tracker
+# Mosa — Personal Life Tracker
 
-A lightweight, keyboard-centric web application for tracking your daily mood and energy levels.
+A lightweight, visually stunning web application for tracking your daily life. Mosa allows you to quantify your mood, track your daily habits, and manage your dietary and financial habits with an intuitive, premium dark-mode interface.
 
-## Tech Stack
-* **Frontend:** React, TypeScript, Vite
-* **Styling:** Tailwind CSS (v4), styled-components
-* **Backend:** Supabase (Auth & Database) via Docker
+## Core Features
+
+- **Daily Logs:** Track your mood, energy levels, and daily notes with Vim-style keyboard navigation.
+- **Habits:** Build custom habits, color-code them, and visualize your daily streaks.
+- **Meals & Finance:** Log what you eat, categorize meals, and track your food expenditures (VND) with a dynamic monthly budget and daily analytics.
+
+*For a detailed breakdown, please see the [Documentation](#documentation).*
+
+## Documentation
+
+Dive deeper into how Mosa is built and functions:
+- [Architecture & Tech Stack](./docs/ARCHITECTURE.md)
+- [Detailed Features](./docs/FEATURES.md)
+- [Database Schema & Security](./docs/DATABASE.md)
+
+---
 
 ## Prerequisites
 - Node.js (v18 or higher recommended)
@@ -21,7 +33,7 @@ npm install
 ```
 
 ### 2. Start Local Supabase
-Ensure Docker is running, then spin up the local Supabase stack. This automatically applies database migrations (creates your `daily_logs` table and sets up RLS).
+Ensure Docker is running, then spin up the local Supabase stack. This automatically applies database migrations (creates your tables and sets up RLS).
 
 ```bash
 npm run supabase:start
@@ -63,9 +75,3 @@ You can preview the build using:
 ```bash
 npm run preview
 ```
-
-## Vim-Style Keyboard Navigation
-The application features fast data entry using standard vim keys:
-- `j` / `k` : Move vertically between Mood and Energy selections.
-- `h` / `l` : Adjust the score left or right (decrease/increase).
-- `Enter` : Submit the daily log when the submit button is active.
