@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { MealTracker } from '../components/MealTracker';
 import { MealHeatmap } from '../components/MealHeatmap';
-import { mealService, type Meal } from '../services/mealService';
+import { MealAnalytics } from '../components/MealAnalytics';
+import { mealService, type Meal, type UserSettings } from '../services/mealService';
+import { Home, UtensilsCrossed, TrendingUp, CalendarDays, Settings, Trash2, Edit2, CheckCircle2 } from 'lucide-react';
 
 const fadeIn = keyframes`
   from { opacity: 0; transform: translateY(12px); }
@@ -88,6 +90,11 @@ const HistoryItem = styled.div`
   display: flex;
   align-items: center;
   gap: 1rem;
+  position: relative;
+
+  &:hover .actions {
+    opacity: 1;
+  }
 `;
 
 const HistoryIconWrapper = styled.div<{ $type: 'eat_out' | 'eat_home' }>`
@@ -112,6 +119,18 @@ const HistoryType = styled.span`
   color: #fff;
   font-weight: 600;
   text-transform: capitalize;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const TagBadge = styled.span`
+  background: #27272a;
+  color: #a1a1aa;
+  font-size: 0.7rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  font-weight: normal;
 `;
 
 const HistoryDate = styled.span`
@@ -120,9 +139,37 @@ const HistoryDate = styled.span`
 `;
 
 const HistoryCost = styled.span`
-  color: #f97316;
+  color: #fff;
   font-weight: 600;
   font-size: 1.1rem;
+`;
+
+const ActionButtons = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  opacity: 0;
+  transition: opacity 0.2s;
+  
+  @media (max-width: 768px) {
+    opacity: 1;
+  }
+`;
+
+const ActionBtn = styled.button`
+  background: none;
+  border: none;
+  color: #71717a;
+  cursor: pointer;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+
+  &:hover {
+    color: #fff;
+    background: #27272a;
+  }
 `;
 
 const SummaryBanner = styled.div`
@@ -155,6 +202,12 @@ const SummaryStat = styled.div`
     background: linear-gradient(90deg, transparent, rgba(249, 115, 22, 0.2), transparent);
   }
   
+  .header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
   h3 {
     margin: 0;
     color: #a1a1aa;
@@ -172,51 +225,142 @@ const SummaryStat = styled.div`
   }
 `;
 
-import { Home, UtensilsCrossed, TrendingUp, CalendarDays } from 'lucide-react';
+const ProgressBarContainer = styled.div`
+  width: 100%;
+  height: 6px;
+  background: #27272a;
+  border-radius: 3px;
+  margin-top: 0.5rem;
+  overflow: hidden;
+`;
+
+const ProgressBarFill = styled.div<{ $percent: number }>`
+  height: 100%;
+  background: ${({ $percent }) => ($percent > 90 ? '#ef4444' : '#10b981')};
+  width: ${({ $percent }) => Math.min($percent, 100)}%;
+  transition: width 0.5s ease;
+`;
+
+const BudgetInputWrapper = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.5rem;
+
+  input {
+    background: #18181b;
+    border: 1px solid #3f3f46;
+    border-radius: 6px;
+    padding: 0.4rem 0.5rem;
+    color: #fff;
+    font-size: 0.9rem;
+    width: 120px;
+    outline: none;
+
+    &:focus {
+      border-color: #10b981;
+    }
+  }
+
+  button {
+    background: #10b981;
+    border: none;
+    border-radius: 6px;
+    color: #000;
+    padding: 0.4rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+      background: #059669;
+    }
+  }
+`;
 
 export function Meals() {
   const [recentMeals, setRecentMeals] = useState<Meal[]>([]);
   const [allMeals, setAllMeals] = useState<Meal[]>([]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  
+  const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
+  const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
+  const [isEditingBudget, setIsEditingBudget] = useState(false);
+  const [budgetInput, setBudgetInput] = useState('');
 
-  const fetchMeals = async () => {
+  const fetchData = async () => {
     try {
-      const [recent, all] = await Promise.all([
+      const [recent, all, settings] = await Promise.all([
         mealService.getRecentMeals(),
-        mealService.getAllMeals()
+        mealService.getAllMeals(),
+        mealService.getUserSettings()
       ]);
       setRecentMeals(recent);
       setAllMeals(all);
+      setUserSettings(settings);
+      if (settings?.monthly_food_budget_vnd) {
+        setBudgetInput(settings.monthly_food_budget_vnd.toString());
+      }
     } catch (err) {
       console.error(err);
     }
   };
 
   useEffect(() => {
-    fetchMeals();
+    fetchData();
   }, []);
 
   const handleMealLogged = () => {
-    fetchMeals(); // Refresh data when new meal is added
+    setEditingMeal(null);
+    fetchData();
   };
 
-  // Calculate summaries
+  const handleDelete = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this meal?')) {
+      try {
+        await mealService.deleteMeal(id);
+        fetchData();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  };
+
+  const handleSaveBudget = async () => {
+    try {
+      const val = budgetInput ? parseInt(budgetInput.replace(/\D/g, ''), 10) : null;
+      const newSettings = await mealService.updateUserSettings(val);
+      setUserSettings(newSettings);
+      setIsEditingBudget(false);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleBudgetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value.replace(/\D/g, '');
+    if (!rawValue) {
+      setBudgetInput('');
+      return;
+    }
+    setBudgetInput(parseInt(rawValue, 10).toLocaleString('en-US'));
+  };
+
+  // Calculate summaries (total food cost)
   const now = new Date();
-  
-  // Start of current week (assuming Monday start)
   const startOfWeek = new Date(now);
-  const day = startOfWeek.getDay() || 7; // 1-7 where 1 is Monday
+  const day = startOfWeek.getDay() || 7; 
   startOfWeek.setDate(startOfWeek.getDate() - day + 1);
   startOfWeek.setHours(0, 0, 0, 0);
 
-  // Start of current month
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
   let weekSpent = 0;
   let monthSpent = 0;
 
   allMeals.forEach(meal => {
-    if (meal.location_type === 'eat_out' && meal.cost_vnd) {
+    if (meal.cost_vnd) {
       const mealDate = new Date(meal.created_at);
       if (mealDate >= startOfMonth) {
         monthSpent += meal.cost_vnd;
@@ -226,6 +370,9 @@ export function Meals() {
       }
     }
   });
+
+  const budget = userSettings?.monthly_food_budget_vnd;
+  const budgetPercent = budget ? (monthSpent / budget) * 100 : 0;
 
   return (
     <PageContainer>
@@ -237,24 +384,63 @@ export function Meals() {
 
       <SummaryBanner>
         <SummaryStat>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#a1a1aa' }}>
-            <TrendingUp size={16} />
-            <h3>Spent This Week</h3>
+          <div className="header-row">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#a1a1aa' }}>
+              <TrendingUp size={16} />
+              <h3>Total Spent This Week</h3>
+            </div>
           </div>
           <p>{weekSpent.toLocaleString('en-US')} ₫</p>
         </SummaryStat>
+
         <SummaryStat>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#a1a1aa' }}>
-            <CalendarDays size={16} />
-            <h3>Spent This Month</h3>
+          <div className="header-row">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#a1a1aa' }}>
+              <CalendarDays size={16} />
+              <h3>Total Spent This Month</h3>
+            </div>
+            <ActionBtn onClick={() => setIsEditingBudget(!isEditingBudget)}>
+              <Settings size={16} />
+            </ActionBtn>
           </div>
+          
           <p>{monthSpent.toLocaleString('en-US')} ₫</p>
+          
+          {isEditingBudget ? (
+            <BudgetInputWrapper>
+              <input 
+                type="text" 
+                value={budgetInput} 
+                onChange={handleBudgetChange} 
+                placeholder="Budget (VND)" 
+              />
+              <button onClick={handleSaveBudget}><CheckCircle2 size={16} /></button>
+            </BudgetInputWrapper>
+          ) : budget ? (
+            <>
+              <ProgressBarContainer>
+                <ProgressBarFill $percent={budgetPercent} />
+              </ProgressBarContainer>
+              <div style={{ fontSize: '0.75rem', color: '#a1a1aa', marginTop: '0.25rem', display: 'flex', justifyContent: 'space-between' }}>
+                <span>{budgetPercent.toFixed(1)}% used</span>
+                <span>Budget: {budget.toLocaleString('en-US')} ₫</span>
+              </div>
+            </>
+          ) : (
+            <div style={{ fontSize: '0.75rem', color: '#71717a', marginTop: '0.25rem' }}>
+              Click the gear icon to set a monthly budget.
+            </div>
+          )}
         </SummaryStat>
       </SummaryBanner>
 
       <DashboardGrid>
         <Column>
-          <MealTracker onMealLogged={handleMealLogged} />
+          <MealTracker 
+            onMealLogged={handleMealLogged} 
+            initialMeal={editingMeal}
+            onCancelEdit={() => setEditingMeal(null)}
+          />
           
           <Card>
             <MealHeatmap 
@@ -266,7 +452,7 @@ export function Meals() {
         </Column>
         <Column>
           <Card>
-            <h2 style={{ color: '#fff', fontSize: '1.25rem', marginBottom: '1.5rem' }}>
+            <h2 style={{ color: '#fff', fontSize: '1.25rem', marginBottom: '1.5rem', marginTop: 0 }}>
               {selectedDate ? `Meals on ${selectedDate}` : 'Recent Meals'}
             </h2>
             {recentMeals.length === 0 && !selectedDate ? (
@@ -281,19 +467,36 @@ export function Meals() {
                     <HistoryContent>
                       <HistoryType>
                         {meal.meal_name || (meal.location_type === 'eat_out' ? 'Ate Out' : 'Ate at Home')}
+                        {meal.tags?.length > 0 && meal.tags.map(tag => (
+                          <TagBadge key={tag}>{tag}</TagBadge>
+                        ))}
                       </HistoryType>
                       <HistoryDate>
-                        {meal.location_type === 'eat_out' ? 'Eat Out' : 'Eat at Home'} &bull; {new Date(meal.created_at).toLocaleString()}
+                        {meal.meal_type} &bull; {meal.location_type === 'eat_out' ? 'Eat Out' : 'Eat at Home'} &bull; {new Date(meal.created_at).toLocaleString()}
                       </HistoryDate>
                     </HistoryContent>
-                    {meal.location_type === 'eat_out' && meal.cost_vnd != null && (
-                      <HistoryCost>{meal.cost_vnd.toLocaleString('en-US')} ₫</HistoryCost>
+                    
+                    {meal.cost_vnd != null && (
+                      <HistoryCost style={{ color: meal.location_type === 'eat_out' ? '#f97316' : '#10b981' }}>
+                        {meal.cost_vnd.toLocaleString('en-US')} ₫
+                      </HistoryCost>
                     )}
+
+                    <ActionButtons className="actions">
+                      <ActionBtn onClick={() => setEditingMeal(meal)} title="Edit Meal">
+                        <Edit2 size={16} />
+                      </ActionBtn>
+                      <ActionBtn onClick={() => handleDelete(meal.id)} title="Delete Meal">
+                        <Trash2 size={16} />
+                      </ActionBtn>
+                    </ActionButtons>
                   </HistoryItem>
                 ))}
               </HistoryList>
             )}
           </Card>
+
+          <MealAnalytics meals={allMeals} />
         </Column>
       </DashboardGrid>
     </PageContainer>

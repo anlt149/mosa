@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { Home, UtensilsCrossed, Loader2, CheckCircle2 } from 'lucide-react';
-import { mealService } from '../services/mealService';
+import { Home, UtensilsCrossed, Loader2, CheckCircle2, X } from 'lucide-react';
+import { mealService, type Meal } from '../services/mealService';
 
 const Card = styled.div`
   background: #09090b;
@@ -23,14 +23,36 @@ const Card = styled.div`
 const Header = styled.div`
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  justify-content: space-between;
   margin-bottom: 1.5rem;
+`;
+
+const HeaderTitle = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   color: #fff;
   font-size: 1.1rem;
   font-weight: 600;
   
   svg {
     color: #10b981;
+  }
+`;
+
+const CancelButton = styled.button`
+  background: none;
+  border: none;
+  color: #a1a1aa;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  border-radius: 4px;
+  &:hover {
+    color: #fff;
+    background: #27272a;
   }
 `;
 
@@ -76,6 +98,29 @@ const OptionButton = styled.button<{ $active: boolean; $type: 'eat_home' | 'eat_
   }
 `;
 
+const PillGroup = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+`;
+
+const PillButton = styled.button<{ $active: boolean }>`
+  background: ${({ $active }) => ($active ? '#27272a' : '#18181b')};
+  border: 1px solid ${({ $active }) => ($active ? '#3f3f46' : '#27272a')};
+  color: ${({ $active }) => ($active ? '#fff' : '#a1a1aa')};
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #27272a;
+    color: #fff;
+  }
+`;
+
 const InputGroup = styled.div`
   display: flex;
   flex-direction: column;
@@ -108,19 +153,24 @@ const StyledInput = styled.input`
   background: #18181b;
   border: 1px solid #3f3f46;
   border-radius: 8px;
-  padding: 0.875rem 3rem 0.875rem 1rem;
+  padding: 0.875rem;
   color: #fff;
   font-size: 1rem;
   transition: border-color 0.2s;
+  box-sizing: border-box;
 
   &:focus {
     outline: none;
-    border-color: #f97316;
+    border-color: #10b981;
   }
   
   &::placeholder {
     color: #52525b;
   }
+`;
+
+const CostInput = styled(StyledInput)`
+  padding-right: 3rem;
 `;
 
 const SubmitButton = styled.button`
@@ -159,27 +209,46 @@ const SuccessMessage = styled.div`
   padding: 1rem;
 `;
 
+type MealTypeOption = 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack';
+
 interface MealTrackerProps {
   onMealLogged?: () => void;
+  initialMeal?: Meal | null;
+  onCancelEdit?: () => void;
 }
 
-export function MealTracker({ onMealLogged }: MealTrackerProps) {
+export function MealTracker({ onMealLogged, initialMeal, onCancelEdit }: MealTrackerProps) {
   const [mealName, setMealName] = useState('');
   const [locationType, setLocationType] = useState<'eat_out' | 'eat_home'>('eat_home');
+  const [mealType, setMealType] = useState<MealTypeOption>('Lunch');
+  const [tagsInput, setTagsInput] = useState('');
   const [costInput, setCostInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (initialMeal) {
+      setMealName(initialMeal.meal_name);
+      setLocationType(initialMeal.location_type);
+      setMealType(initialMeal.meal_type || 'Lunch');
+      setTagsInput(initialMeal.tags?.join(', ') || '');
+      setCostInput(initialMeal.cost_vnd ? initialMeal.cost_vnd.toLocaleString('en-US') : '');
+    } else {
+      setMealName('');
+      setLocationType('eat_home');
+      setMealType('Lunch');
+      setTagsInput('');
+      setCostInput('');
+    }
+  }, [initialMeal]);
+
   const handleCostChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Strip non-digits
     const rawValue = e.target.value.replace(/\D/g, '');
     if (!rawValue) {
       setCostInput('');
       return;
     }
-    
-    // Format with commas
     const formatted = parseInt(rawValue, 10).toLocaleString('en-US');
     setCostInput(formatted);
   };
@@ -195,11 +264,23 @@ export function MealTracker({ onMealLogged }: MealTrackerProps) {
       setError(null);
       
       let costValue: number | undefined = undefined;
-      if (locationType === 'eat_out' && costInput) {
+      if (costInput) {
         costValue = parseInt(costInput.replace(/\D/g, ''), 10);
       }
+
+      const tagsArray = tagsInput.split(',').map(t => t.trim()).filter(t => t.length > 0);
       
-      await mealService.logMeal(mealName.trim(), locationType, costValue);
+      if (initialMeal) {
+        await mealService.updateMeal(initialMeal.id, {
+          meal_name: mealName.trim(),
+          location_type: locationType,
+          meal_type: mealType,
+          tags: tagsArray,
+          cost_vnd: costValue || null,
+        });
+      } else {
+        await mealService.logMeal(mealName.trim(), locationType, mealType, tagsArray, costValue);
+      }
       
       setSuccess(true);
       if (onMealLogged) {
@@ -207,9 +288,15 @@ export function MealTracker({ onMealLogged }: MealTrackerProps) {
       }
       setTimeout(() => {
         setSuccess(false);
-        setMealName('');
-        setCostInput('');
-        setLocationType('eat_home');
+        if (!initialMeal) {
+          setMealName('');
+          setCostInput('');
+          setTagsInput('');
+          setLocationType('eat_home');
+          setMealType('Lunch');
+        } else if (onCancelEdit) {
+          onCancelEdit();
+        }
       }, 2000);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to log meal';
@@ -222,8 +309,15 @@ export function MealTracker({ onMealLogged }: MealTrackerProps) {
   return (
     <Card>
       <Header>
-        <UtensilsCrossed size={20} />
-        Log a Meal
+        <HeaderTitle>
+          <UtensilsCrossed size={20} />
+          {initialMeal ? 'Edit Meal' : 'Log a Meal'}
+        </HeaderTitle>
+        {initialMeal && onCancelEdit && (
+          <CancelButton onClick={onCancelEdit}>
+            <X size={20} />
+          </CancelButton>
+        )}
       </Header>
 
       <InputGroup>
@@ -243,10 +337,7 @@ export function MealTracker({ onMealLogged }: MealTrackerProps) {
         <OptionButton 
           $active={locationType === 'eat_home'} 
           $type="eat_home"
-          onClick={() => {
-            setLocationType('eat_home');
-            setCostInput('');
-          }}
+          onClick={() => setLocationType('eat_home')}
         >
           <Home size={24} />
           Eat at Home
@@ -261,21 +352,41 @@ export function MealTracker({ onMealLogged }: MealTrackerProps) {
         </OptionButton>
       </ButtonGroup>
 
-      {locationType === 'eat_out' && (
-        <InputGroup>
-          <Label>Cost</Label>
-          <InputWrapper>
-            <StyledInput 
-              type="text" 
-              inputMode="numeric"
-              placeholder="e.g. 150,000" 
-              value={costInput}
-              onChange={handleCostChange}
-            />
-            <CurrencySymbol>VND</CurrencySymbol>
-          </InputWrapper>
-        </InputGroup>
-      )}
+      <PillGroup>
+        {(['Breakfast', 'Lunch', 'Dinner', 'Snack'] as MealTypeOption[]).map(type => (
+          <PillButton 
+            key={type} 
+            $active={mealType === type}
+            onClick={() => setMealType(type)}
+          >
+            {type}
+          </PillButton>
+        ))}
+      </PillGroup>
+
+      <InputGroup>
+        <Label>Tags (optional)</Label>
+        <StyledInput 
+          type="text" 
+          placeholder="e.g. Healthy, Spicy, Cheat Meal..." 
+          value={tagsInput}
+          onChange={(e) => setTagsInput(e.target.value)}
+        />
+      </InputGroup>
+
+      <InputGroup>
+        <Label>Cost (optional)</Label>
+        <InputWrapper>
+          <CostInput 
+            type="text" 
+            inputMode="numeric"
+            placeholder="e.g. 150,000" 
+            value={costInput}
+            onChange={handleCostChange}
+          />
+          <CurrencySymbol>VND</CurrencySymbol>
+        </InputWrapper>
+      </InputGroup>
 
       {error && (
         <div style={{ color: '#ef4444', marginBottom: '1rem', fontSize: '0.9rem', textAlign: 'center' }}>
@@ -286,7 +397,7 @@ export function MealTracker({ onMealLogged }: MealTrackerProps) {
       {success ? (
         <SuccessMessage>
           <CheckCircle2 size={20} />
-          Meal logged successfully!
+          {initialMeal ? 'Meal updated successfully!' : 'Meal logged successfully!'}
         </SuccessMessage>
       ) : (
         <SubmitButton onClick={handleSubmit} disabled={isSubmitting}>
@@ -298,7 +409,7 @@ export function MealTracker({ onMealLogged }: MealTrackerProps) {
           ) : (
             <>
               <CheckCircle2 size={18} />
-              Save Meal
+              {initialMeal ? 'Save Changes' : 'Save Meal'}
             </>
           )}
         </SubmitButton>
