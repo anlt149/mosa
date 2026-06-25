@@ -261,6 +261,31 @@ const CostInputWrapper = styled.div`
   }
 `;
 
+const CostActions = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+`;
+
+const QuickActionButton = styled.button`
+  background: #18181b;
+  border: 1px solid #3f3f46;
+  color: #a1a1aa;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+
+  &:hover {
+    color: #fff;
+    border-color: #52525b;
+  }
+`;
+
 const ActionButtons = styled.div`
   display: flex;
   gap: 0.5rem;
@@ -411,8 +436,8 @@ function ExpenseItem({
   const initialAmount = record?.actual_amount ?? fc.default_amount;
   
   const [localInput, setLocalInput] = useState(initialAmount ? formatter.format(initialAmount) : '');
+  const [showInput, setShowInput] = useState(false);
 
-  // Sync local input if the parent prop changes (e.g. month switched)
   useEffect(() => {
     setLocalInput(initialAmount ? formatter.format(initialAmount) : '');
   }, [initialAmount]);
@@ -425,6 +450,15 @@ function ExpenseItem({
   const handleBlur = () => {
     onCostChange(fc.id, localInput, isPaid);
   };
+
+  const handleSameAsPlanned = () => {
+    const planStr = fc.default_amount ? fc.default_amount.toString() : '';
+    setLocalInput(fc.default_amount ? formatter.format(fc.default_amount) : '');
+    onCostChange(fc.id, planStr, true);
+  };
+
+  const isCustomized = record?.actual_amount != null && record.actual_amount !== fc.default_amount;
+  const displayInput = showInput || isCustomized || !fc.default_amount;
 
   return (
     <ExpenseCard $isPaid={isPaid}>
@@ -440,17 +474,29 @@ function ExpenseItem({
         <span>Plan: {fc.default_amount ? formatter.format(fc.default_amount) : '0'} ₫</span>
       </ExpenseInfo>
 
-      <CostInputWrapper>
-        <input 
-          type="text"
-          inputMode="numeric"
-          placeholder="Actual Cost"
-          value={localInput}
-          onChange={handleInputChange}
-          onBlur={handleBlur}
-        />
-        <span>₫</span>
-      </CostInputWrapper>
+      {displayInput ? (
+        <CostInputWrapper>
+          <input 
+            type="text"
+            inputMode="numeric"
+            placeholder="Actual Cost"
+            value={localInput}
+            onChange={handleInputChange}
+            onBlur={handleBlur}
+            autoFocus={showInput}
+          />
+          <span>₫</span>
+        </CostInputWrapper>
+      ) : (
+        <CostActions>
+          <QuickActionButton onClick={handleSameAsPlanned}>
+            Same as Planned
+          </QuickActionButton>
+          <QuickActionButton onClick={() => setShowInput(true)}>
+            Custom Amount
+          </QuickActionButton>
+        </CostActions>
+      )}
 
       <ActionButtons>
         <ActionBtn onClick={() => onEdit(fc)}>
