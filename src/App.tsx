@@ -10,6 +10,7 @@ import { Dashboard } from './pages/Dashboard';
 // import { YearInPixels } from './pages/YearInPixels';
 import { Habits } from './pages/Habits';
 import { Meals } from './pages/Meals';
+import { FixedCosts } from './pages/FixedCosts';
 
 const AppShell = styled.div`
   display: flex;
@@ -53,6 +54,17 @@ function App() {
                 <AppShell>
                   <AppHeader />
                   <Meals />
+                </AppShell>
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/bills"
+            element={
+              <AuthGuard>
+                <AppShell>
+                  <AppHeader />
+                  <FixedCosts />
                 </AppShell>
               </AuthGuard>
             }
