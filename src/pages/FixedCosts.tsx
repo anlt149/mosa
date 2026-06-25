@@ -682,6 +682,17 @@ export function FixedCosts() {
         </MonthNavigator>
       </Header>
 
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.5rem' }}>
+        <AddButton onClick={() => {
+          setEditingTemplate(null);
+          setModalName('');
+          setModalCost('');
+          setIsModalOpen(true);
+        }}>
+          <Plus size={18} /> Add Fixed Cost
+        </AddButton>
+      </div>
+
       <SummaryBanner>
         <SummaryStat $color="rgba(255,255,255,0.2)">
           <h3>Plan</h3>
@@ -702,17 +713,6 @@ export function FixedCosts() {
           </p>
         </SummaryStat>
       </SummaryBanner>
-
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.5rem' }}>
-        <AddButton onClick={() => {
-          setEditingTemplate(null);
-          setModalName('');
-          setModalCost('');
-          setIsModalOpen(true);
-        }}>
-          <Plus size={18} /> Add Fixed Cost
-        </AddButton>
-      </div>
 
       <ExpensesGrid>
         {fixedCosts.map(fc => (

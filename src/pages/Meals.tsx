@@ -382,6 +382,14 @@ export function Meals() {
         </Title>
       </Header>
 
+      <div style={{ marginBottom: '2rem' }}>
+        <MealTracker 
+          onMealLogged={handleMealLogged} 
+          initialMeal={editingMeal}
+          onCancelEdit={() => setEditingMeal(null)}
+        />
+      </div>
+
       <SummaryBanner>
         <SummaryStat>
           <div className="header-row">
@@ -436,12 +444,6 @@ export function Meals() {
 
       <DashboardGrid>
         <Column>
-          <MealTracker 
-            onMealLogged={handleMealLogged} 
-            initialMeal={editingMeal}
-            onCancelEdit={() => setEditingMeal(null)}
-          />
-          
           <Card>
             <MealHeatmap 
               meals={allMeals} 

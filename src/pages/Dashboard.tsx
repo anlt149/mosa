@@ -52,7 +52,7 @@ const DashboardGrid = styled.div`
   min-width: 0;
 
   @media (min-width: 1024px) {
-    grid-template-columns: 1fr 400px;
+    grid-template-columns: 1fr 1fr;
     align-items: start;
   }
 `;
@@ -553,61 +553,26 @@ export function Dashboard() {
         </AlertBanner>
       )}
 
-      <DashboardGrid>
-        <Column>
-          <Card>
-            <ActivityHeatmap
-              logs={logs}
-              onSelectDate={handleDateSelect}
-              selectedDate={activeDate}
-            />
-          </Card>
-          <Card>
-            <WeeklyTrend logs={logs} />
-          </Card>
-          {recentNotes.length > 0 && (
-            <Card>
-              <SectionTitle>
-                <BookOpen size={18} color="#10b981" />
-                Recent Journal Notes
-              </SectionTitle>
-              <div>
-                {recentNotes.map(log => (
-                  <NoteItem key={log.id}>
-                    <NoteDate>
-                      {new Date(log.log_date + 'T12:00:00').toLocaleDateString('en-US', {
-                        weekday: 'short',
-                        month: 'short',
-                        day: 'numeric'
-                      })}
-                    </NoteDate>
-                    <NoteText>{log.note}</NoteText>
-                  </NoteItem>
-                ))}
-              </div>
-            </Card>
+      <Card style={{ padding: '2rem', marginBottom: '2rem' }}>
+        <FormHeader>
+          <DateDisplay>
+            <Calendar size={20} color="#10b981" />
+            {isPastDay ? activeDate : 'Today'}
+          </DateDisplay>
+          
+          {!isPastDay && (
+            <ActionButton 
+              onClick={handleSameAsYesterday}
+              disabled={!yesterdayLog}
+            >
+              <History size={14} />
+              Copy Yesterday
+            </ActionButton>
           )}
-        </Column>
+        </FormHeader>
 
-        <Column>
-          <Card style={{ padding: '2rem' }}>
-            <FormHeader>
-              <DateDisplay>
-                <Calendar size={20} color="#10b981" />
-                {isPastDay ? activeDate : 'Today'}
-              </DateDisplay>
-              
-              {!isPastDay && (
-                <ActionButton 
-                  onClick={handleSameAsYesterday}
-                  disabled={!yesterdayLog}
-                >
-                  <History size={14} />
-                  Copy Yesterday
-                </ActionButton>
-              )}
-            </FormHeader>
-
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
+          <div>
             <InputSection 
               $active={activeSection === 'mood'} 
               onClick={() => setActiveSection('mood')}
@@ -651,17 +616,17 @@ export function Dashboard() {
                 />
               </SliderWrapper>
             </InputSection>
+          </div>
 
-            <div style={{ marginTop: '1rem' }}>
-              <NoteArea
-                placeholder="Journal your day..."
-                value={note}
-                $active={activeSection === 'note'}
-                onFocus={() => setActiveSection('note')}
-                onChange={e => setNote(e.target.value)}
-              />
-            </div>
-
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <NoteArea
+              style={{ flex: 1 }}
+              placeholder="Journal your day..."
+              value={note}
+              $active={activeSection === 'note'}
+              onFocus={() => setActiveSection('note')}
+              onChange={e => setNote(e.target.value)}
+            />
             <SubmitButton 
               onClick={handleSubmit} 
               disabled={submitting}
@@ -670,6 +635,46 @@ export function Dashboard() {
               <Send size={18} />
               {submitting ? 'Saving...' : (selectedLog ? 'Update Entry' : 'Save Entry')}
             </SubmitButton>
+          </div>
+        </div>
+      </Card>
+
+      <DashboardGrid>
+        <Column>
+          <Card>
+            <ActivityHeatmap
+              logs={logs}
+              onSelectDate={handleDateSelect}
+              selectedDate={activeDate}
+            />
+          </Card>
+          {recentNotes.length > 0 && (
+            <Card>
+              <SectionTitle>
+                <BookOpen size={18} color="#10b981" />
+                Recent Journal Notes
+              </SectionTitle>
+              <div>
+                {recentNotes.map(log => (
+                  <NoteItem key={log.id}>
+                    <NoteDate>
+                      {new Date(log.log_date + 'T12:00:00').toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric'
+                      })}
+                    </NoteDate>
+                    <NoteText>{log.note}</NoteText>
+                  </NoteItem>
+                ))}
+              </div>
+            </Card>
+          )}
+        </Column>
+
+        <Column>
+          <Card>
+            <WeeklyTrend logs={logs} />
           </Card>
         </Column>
       </DashboardGrid>
