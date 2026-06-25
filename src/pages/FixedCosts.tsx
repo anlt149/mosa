@@ -133,13 +133,26 @@ const ExpenseCard = styled.div<{ $isPaid: boolean }>`
   border-radius: 12px;
   padding: 1.25rem;
   display: flex;
-  align-items: center;
-  gap: 1.5rem;
+  flex-direction: column;
+  gap: 1.25rem;
   transition: all 0.2s;
   
   &:hover {
     border-color: ${({ $isPaid }) => $isPaid ? '#059669' : '#3f3f46'};
   }
+`;
+
+const CardHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+`;
+
+const CardBody = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
 
   @media (max-width: 640px) {
     flex-direction: column;
@@ -462,58 +475,63 @@ function ExpenseItem({
 
   return (
     <ExpenseCard $isPaid={isPaid}>
-      <DesktopToggleWrapper>
-        <ToggleSwitch 
-          $isPaid={isPaid}
-          onClick={() => onTogglePaid(fc.id, isPaid, initialAmount)}
-        />
-      </DesktopToggleWrapper>
+      <CardHeader>
+        <ExpenseInfo>
+          <h3>{fc.name}</h3>
+          <span>Plan: {fc.default_amount ? formatter.format(fc.default_amount) : '0'} ₫</span>
+        </ExpenseInfo>
+        <ActionButtons>
+          <ActionBtn onClick={() => onEdit(fc)}>
+            <Edit2 size={18} />
+          </ActionBtn>
+          <ActionBtn onClick={() => onDelete(fc.id)}>
+            <Trash2 size={18} />
+          </ActionBtn>
+        </ActionButtons>
+      </CardHeader>
       
-      <ExpenseInfo>
-        <h3>{fc.name}</h3>
-        <span>Plan: {fc.default_amount ? formatter.format(fc.default_amount) : '0'} ₫</span>
-      </ExpenseInfo>
-
-      {displayInput ? (
-        <CostInputWrapper>
-          <input 
-            type="text"
-            inputMode="numeric"
-            placeholder="Actual Cost"
-            value={localInput}
-            onChange={handleInputChange}
-            onBlur={handleBlur}
-            autoFocus={showInput}
+      <CardBody>
+        <DesktopToggleWrapper>
+          <ToggleSwitch 
+            $isPaid={isPaid}
+            onClick={() => onTogglePaid(fc.id, isPaid, initialAmount)}
           />
-          <span>₫</span>
-        </CostInputWrapper>
-      ) : (
-        <CostActions>
-          <QuickActionButton onClick={handleSameAsPlanned}>
-            Same as Planned
-          </QuickActionButton>
-          <QuickActionButton onClick={() => setShowInput(true)}>
-            Custom Amount
-          </QuickActionButton>
-        </CostActions>
-      )}
+        </DesktopToggleWrapper>
 
-      <ActionButtons>
-        <ActionBtn onClick={() => onEdit(fc)}>
-          <Edit2 size={18} />
-        </ActionBtn>
-        <ActionBtn onClick={() => onDelete(fc.id)}>
-          <Trash2 size={18} />
-        </ActionBtn>
-      </ActionButtons>
+        {isPaid && (
+          displayInput ? (
+            <CostInputWrapper>
+              <input 
+                type="text"
+                inputMode="numeric"
+                placeholder="Actual Cost"
+                value={localInput}
+                onChange={handleInputChange}
+                onBlur={handleBlur}
+                autoFocus={showInput}
+              />
+              <span>₫</span>
+            </CostInputWrapper>
+          ) : (
+            <CostActions>
+              <QuickActionButton onClick={handleSameAsPlanned}>
+                Same as Planned
+              </QuickActionButton>
+              <QuickActionButton onClick={() => setShowInput(true)}>
+                Custom Amount
+              </QuickActionButton>
+            </CostActions>
+          )
+        )}
 
-      <MobileToggleWrapper 
-        $isPaid={isPaid} 
-        onClick={() => onTogglePaid(fc.id, isPaid, initialAmount)}
-      >
-        <span>{isPaid ? 'Paid' : 'Unpaid'}</span>
-        <ToggleSwitch $isPaid={isPaid} as="div" />
-      </MobileToggleWrapper>
+        <MobileToggleWrapper 
+          $isPaid={isPaid} 
+          onClick={() => onTogglePaid(fc.id, isPaid, initialAmount)}
+        >
+          <span>{isPaid ? 'Paid' : 'Unpaid'}</span>
+          <ToggleSwitch $isPaid={isPaid} as="div" />
+        </MobileToggleWrapper>
+      </CardBody>
     </ExpenseCard>
   );
 }
