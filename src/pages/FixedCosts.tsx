@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import styled, { keyframes } from 'styled-components';
-import { ChevronLeft, ChevronRight, Plus, Edit2, Trash2, CheckCircle2, Circle, TrendingUp, TrendingDown } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Edit2, Trash2, TrendingUp, TrendingDown } from 'lucide-react';
 import { expenseService, type FixedCost, type CostRecord } from '../services/expenseService';
 
 const fadeIn = keyframes`
@@ -148,19 +148,57 @@ const ExpenseCard = styled.div<{ $isPaid: boolean }>`
   }
 `;
 
-const CheckboxButton = styled.button<{ $isPaid: boolean }>`
-  background: none;
+const ToggleSwitch = styled.button<{ $isPaid: boolean }>`
+  background: ${({ $isPaid }) => $isPaid ? '#10b981' : '#3f3f46'};
   border: none;
-  color: ${({ $isPaid }) => $isPaid ? '#10b981' : '#52525b'};
+  border-radius: 999px;
+  width: 52px;
+  height: 28px;
+  position: relative;
   cursor: pointer;
   padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.2s;
+  transition: background 0.3s;
+  flex-shrink: 0;
 
-  &:hover {
-    color: ${({ $isPaid }) => $isPaid ? '#059669' : '#a1a1aa'};
+  &::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: ${({ $isPaid }) => $isPaid ? '26px' : '2px'};
+    width: 24px;
+    height: 24px;
+    background: #fff;
+    border-radius: 50%;
+    transition: left 0.3s;
+  }
+`;
+
+const DesktopToggleWrapper = styled.div`
+  display: block;
+  @media (max-width: 640px) {
+    display: none;
+  }
+`;
+
+const MobileToggleWrapper = styled.div<{ $isPaid: boolean }>`
+  display: none;
+  @media (max-width: 640px) {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    align-items: center;
+    background: ${({ $isPaid }) => $isPaid ? 'rgba(16, 185, 129, 0.1)' : '#18181b'};
+    border: 1px solid ${({ $isPaid }) => $isPaid ? '#10b981' : '#27272a'};
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    margin-top: 0.5rem;
+    cursor: pointer;
+    box-sizing: border-box;
+    
+    span {
+      font-weight: 600;
+      color: ${({ $isPaid }) => $isPaid ? '#10b981' : '#a1a1aa'};
+    }
   }
 `;
 
@@ -198,7 +236,7 @@ const CostInputWrapper = styled.div`
     color: #fff;
     font-size: 1rem;
     font-weight: 600;
-    width: 100px;
+    min-width: 140px;
     text-align: right;
     outline: none;
 
@@ -211,6 +249,15 @@ const CostInputWrapper = styled.div`
     color: #a1a1aa;
     font-size: 0.9rem;
     font-weight: 500;
+  }
+
+  @media (max-width: 640px) {
+    width: 100%;
+    box-sizing: border-box;
+    input {
+      flex: 1;
+      text-align: left;
+    }
   }
 `;
 
@@ -381,12 +428,12 @@ function ExpenseItem({
 
   return (
     <ExpenseCard $isPaid={isPaid}>
-      <CheckboxButton 
-        $isPaid={isPaid}
-        onClick={() => onTogglePaid(fc.id, isPaid, initialAmount)}
-      >
-        {isPaid ? <CheckCircle2 size={28} /> : <Circle size={28} />}
-      </CheckboxButton>
+      <DesktopToggleWrapper>
+        <ToggleSwitch 
+          $isPaid={isPaid}
+          onClick={() => onTogglePaid(fc.id, isPaid, initialAmount)}
+        />
+      </DesktopToggleWrapper>
       
       <ExpenseInfo>
         <h3>{fc.name}</h3>
@@ -413,6 +460,14 @@ function ExpenseItem({
           <Trash2 size={18} />
         </ActionBtn>
       </ActionButtons>
+
+      <MobileToggleWrapper 
+        $isPaid={isPaid} 
+        onClick={() => onTogglePaid(fc.id, isPaid, initialAmount)}
+      >
+        <span>{isPaid ? 'Paid' : 'Unpaid'}</span>
+        <ToggleSwitch $isPaid={isPaid} as="div" />
+      </MobileToggleWrapper>
     </ExpenseCard>
   );
 }
