@@ -125,7 +125,54 @@ const HistoryCost = styled.span`
   font-size: 1.1rem;
 `;
 
-import { Home, UtensilsCrossed } from 'lucide-react';
+const SummaryBanner = styled.div`
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 1rem;
+  }
+`;
+
+const SummaryStat = styled.div`
+  flex: 1;
+  background: #09090b;
+  border: 1px solid #27272a;
+  border-radius: 16px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(249, 115, 22, 0.2), transparent);
+  }
+  
+  h3 {
+    margin: 0;
+    color: #a1a1aa;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  p {
+    margin: 0;
+    color: #f97316;
+    font-size: 1.75rem;
+    font-weight: 700;
+  }
+`;
+
+import { Home, UtensilsCrossed, TrendingUp, CalendarDays } from 'lucide-react';
 
 export function Meals() {
   const [recentMeals, setRecentMeals] = useState<Meal[]>([]);
@@ -153,6 +200,33 @@ export function Meals() {
     fetchMeals(); // Refresh data when new meal is added
   };
 
+  // Calculate summaries
+  const now = new Date();
+  
+  // Start of current week (assuming Monday start)
+  const startOfWeek = new Date(now);
+  const day = startOfWeek.getDay() || 7; // 1-7 where 1 is Monday
+  startOfWeek.setDate(startOfWeek.getDate() - day + 1);
+  startOfWeek.setHours(0, 0, 0, 0);
+
+  // Start of current month
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  let weekSpent = 0;
+  let monthSpent = 0;
+
+  allMeals.forEach(meal => {
+    if (meal.location_type === 'eat_out' && meal.cost_vnd) {
+      const mealDate = new Date(meal.created_at);
+      if (mealDate >= startOfMonth) {
+        monthSpent += meal.cost_vnd;
+      }
+      if (mealDate >= startOfWeek) {
+        weekSpent += meal.cost_vnd;
+      }
+    }
+  });
+
   return (
     <PageContainer>
       <Header>
@@ -160,6 +234,23 @@ export function Meals() {
           Meal <span>Tracker</span>
         </Title>
       </Header>
+
+      <SummaryBanner>
+        <SummaryStat>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#a1a1aa' }}>
+            <TrendingUp size={16} />
+            <h3>Spent This Week</h3>
+          </div>
+          <p>{weekSpent.toLocaleString('en-US')} ₫</p>
+        </SummaryStat>
+        <SummaryStat>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#a1a1aa' }}>
+            <CalendarDays size={16} />
+            <h3>Spent This Month</h3>
+          </div>
+          <p>{monthSpent.toLocaleString('en-US')} ₫</p>
+        </SummaryStat>
+      </SummaryBanner>
 
       <DashboardGrid>
         <Column>
