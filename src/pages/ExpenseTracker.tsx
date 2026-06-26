@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import styled from 'styled-components';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { expenseService, type Expense, type FixedCost } from '../services/expenseService';
-import { Plus, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Plus, AlertCircle, X, Trash2, Receipt } from 'lucide-react';
 import { toast } from 'sonner';
 
 const PageContainer = styled.div`
@@ -122,10 +122,28 @@ const Button = styled.button<{ $variant?: 'primary' | 'danger' }>`
   cursor: pointer;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
 
   &:hover {
     opacity: 0.9;
+  }
+`;
+
+const ActionBtn = styled.button`
+  background: none;
+  border: none;
+  color: #71717a;
+  cursor: pointer;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+
+  &:hover {
+    color: #ef4444;
+    background: #27272a;
   }
 `;
 
@@ -161,6 +179,44 @@ const Select = styled.select`
   }
 `;
 
+const FormRow = styled.div`
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+  margin-bottom: 2rem;
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  > * {
+    margin-bottom: 0 !important;
+  }
+`;
+
+const InputWrapper = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  flex: 1;
+`;
+
+const CurrencySymbol = styled.span`
+  position: absolute;
+  right: 1rem;
+  color: #a1a1aa;
+  font-weight: 500;
+  pointer-events: none;
+`;
+
+const CostInput = styled(Input)`
+  padding-right: 3rem;
+  margin-bottom: 0 !important;
+`;
+
 const getMonthRange = () => {
   const d = new Date();
   const year = d.getFullYear();
@@ -180,6 +236,15 @@ export function ExpenseTracker() {
   const [expenseForm, setExpenseForm] = useState({ name: '', amount: '', category_id: '', log_date: new Date().toISOString().split('T')[0] });
   const [categoryForm, setCategoryForm] = useState({ name: '', color: '#3b82f6', monthly_budget: '' });
   const [fixedForm, setFixedForm] = useState({ name: '', default_amount: '', category_id: '' });
+
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>, setter: any, field: string) => {
+    const rawValue = e.target.value.replace(/\D/g, '');
+    if (!rawValue) {
+      setter((prev: any) => ({ ...prev, [field]: '' }));
+      return;
+    }
+    setter((prev: any) => ({ ...prev, [field]: parseInt(rawValue, 10).toLocaleString('en-US') }));
+  };
 
   const monthRange = getMonthRange();
 
@@ -229,6 +294,35 @@ export function ExpenseTracker() {
       toast.success('Marked as paid');
     }
   });
+
+  const deleteExpense = useMutation({
+    mutationFn: expenseService.deleteExpense,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      toast.success('Expense removed');
+    }
+  });
+
+  const handleExpenseSubmit = () => {
+    const amount = parseInt(expenseForm.amount.replace(/\D/g, ''), 10);
+    if (!expenseForm.name.trim()) return toast.error('Please enter an expense name');
+    if (!amount || amount <= 0) return toast.error('Please enter a valid amount');
+    createExpense.mutate({ ...expenseForm, amount });
+  };
+
+  const handleCategorySubmit = () => {
+    const budget = parseInt(categoryForm.monthly_budget.replace(/\D/g, ''), 10);
+    if (!categoryForm.name.trim()) return toast.error('Please enter a category name');
+    if (!budget || budget < 0) return toast.error('Please enter a valid budget');
+    createCategory.mutate({ ...categoryForm, budget });
+  };
+
+  const handleFixedCostSubmit = () => {
+    const amount = parseInt(fixedForm.default_amount.replace(/\D/g, ''), 10);
+    if (!fixedForm.name.trim()) return toast.error('Please enter a bill name');
+    if (!amount || amount <= 0) return toast.error('Please enter a valid amount');
+    createFixedCost.mutate({ ...fixedForm, amount, categoryId: fixedForm.category_id || null });
+  };
 
   // -- Computations --
   const totalBudget = useMemo(() => categories.reduce((s, c) => s + c.monthly_budget, 0), [categories]);
@@ -332,63 +426,91 @@ export function ExpenseTracker() {
       {activeTab === 'expenses' && (
         <Card>
           <h2>Log Expense</h2>
-          <div style={{ marginTop: '1rem' }}>
+          <FormRow>
             <Input 
-              type="text" placeholder="What did you buy?" 
+              style={{ flex: 1 }} type="text" placeholder="What did you buy?" 
               value={expenseForm.name} onChange={e => setExpenseForm({...expenseForm, name: e.target.value})} 
             />
-            <Input 
-              type="number" placeholder="Amount (₫)" 
-              value={expenseForm.amount} onChange={e => setExpenseForm({...expenseForm, amount: e.target.value})} 
-            />
+            <InputWrapper>
+              <CostInput 
+                type="text" inputMode="numeric" placeholder="Amount" 
+                value={expenseForm.amount} onChange={e => handleAmountChange(e, setExpenseForm, 'amount')} 
+              />
+              <CurrencySymbol>VND</CurrencySymbol>
+            </InputWrapper>
+          </FormRow>
+          <FormRow style={{ marginTop: 0, marginBottom: '1rem' }}>
             <Select 
+              style={{ flex: 1 }}
               value={expenseForm.category_id} onChange={e => setExpenseForm({...expenseForm, category_id: e.target.value})}
             >
               <option value="">Select Category</option>
               {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </Select>
             <Input 
-              type="date" 
+              style={{ flex: 1, marginBottom: 0 }} type="date" 
               value={expenseForm.log_date} onChange={e => setExpenseForm({...expenseForm, log_date: e.target.value})} 
             />
-            <Button $variant="primary" onClick={() => createExpense.mutate({ ...expenseForm, amount: parseInt(expenseForm.amount, 10) })}>
-              <Plus size={18} /> Add Expense
-            </Button>
-          </div>
+          </FormRow>
+          <Button style={{ width: '100%', padding: '1rem' }} $variant="primary" onClick={handleExpenseSubmit}>
+            <Plus size={18} /> Add Expense
+          </Button>
 
           <h3 style={{ marginTop: '2rem', marginBottom: '1rem', color: '#fff' }}>Recent Logs</h3>
-          {expenses.map(e => (
-            <CategoryItem key={e.id}>
-              <div>
-                <div style={{ color: '#fff', fontWeight: 600 }}>{e.name}</div>
-                <div style={{ color: '#a1a1aa', fontSize: '0.85rem' }}>{e.log_date} • {categories.find(c => c.id === e.category_id)?.name || 'Uncategorized'}</div>
-              </div>
-              <div style={{ color: '#fff', fontWeight: 700 }}>{formatter.format(e.amount)} ₫</div>
-            </CategoryItem>
-          ))}
+          {expenses.map(e => {
+            const cat = categories.find(c => c.id === e.category_id);
+            return (
+              <CategoryItem key={e.id}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={{ width: 40, height: 40, borderRadius: '10px', background: cat ? `${cat.color}20` : '#27272a', color: cat?.color || '#a1a1aa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Receipt size={20} />
+                  </div>
+                  <div>
+                    <div style={{ color: '#fff', fontWeight: 600 }}>{e.name}</div>
+                    <div style={{ color: '#a1a1aa', fontSize: '0.85rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      <span>{e.log_date}</span>
+                      {cat && (
+                        <>
+                          <span>•</span>
+                          <span style={{ color: cat.color }}>{cat.name}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={{ color: '#fff', fontWeight: 700, fontSize: '1.1rem' }}>{formatter.format(e.amount)} ₫</div>
+                  <ActionBtn onClick={() => deleteExpense.mutate(e.id)}><Trash2 size={16} /></ActionBtn>
+                </div>
+              </CategoryItem>
+            );
+          })}
         </Card>
       )}
 
       {activeTab === 'categories' && (
         <Card>
           <h2>Manage Categories</h2>
-          <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          <FormRow>
             <Input 
-              style={{ flex: 2, marginBottom: 0 }} type="text" placeholder="Category Name" 
+              style={{ flex: 2 }} type="text" placeholder="Category Name" 
               value={categoryForm.name} onChange={e => setCategoryForm({...categoryForm, name: e.target.value})} 
             />
+            <InputWrapper>
+              <CostInput 
+                type="text" inputMode="numeric" placeholder="Monthly Budget" 
+                value={categoryForm.monthly_budget} onChange={e => handleAmountChange(e, setCategoryForm, 'monthly_budget')} 
+              />
+              <CurrencySymbol>VND</CurrencySymbol>
+            </InputWrapper>
             <Input 
-              style={{ flex: 1, marginBottom: 0 }} type="number" placeholder="Monthly Budget" 
-              value={categoryForm.monthly_budget} onChange={e => setCategoryForm({...categoryForm, monthly_budget: e.target.value})} 
-            />
-            <Input 
-              style={{ flex: 1, marginBottom: 0, padding: 0, height: '46px' }} type="color" 
+              style={{ flex: 1, padding: 0, height: '46px' }} type="color" 
               value={categoryForm.color} onChange={e => setCategoryForm({...categoryForm, color: e.target.value})} 
             />
-            <Button $variant="primary" style={{ flex: 'none' }} onClick={() => createCategory.mutate({ ...categoryForm, budget: parseInt(categoryForm.monthly_budget, 10) })}>
+            <Button $variant="primary" style={{ flex: 'none' }} onClick={handleCategorySubmit}>
               Add
             </Button>
-          </div>
+          </FormRow>
 
           <div style={{ marginTop: '2rem' }}>
             {categories.map(c => (
@@ -411,39 +533,45 @@ export function ExpenseTracker() {
           <h2>Fixed Costs</h2>
           <p style={{ color: '#a1a1aa', marginBottom: '1.5rem' }}>Manage recurring bills. Marking a bill as paid adds it to your expenses for this month.</p>
           
-          <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '2rem' }}>
+          <FormRow>
             <Input 
-              style={{ flex: 2, marginBottom: 0 }} type="text" placeholder="Bill Name (e.g. Rent)" 
+              style={{ flex: 2 }} type="text" placeholder="Bill Name (e.g. Rent)" 
               value={fixedForm.name} onChange={e => setFixedForm({...fixedForm, name: e.target.value})} 
             />
-            <Input 
-              style={{ flex: 1, marginBottom: 0 }} type="number" placeholder="Default Amount" 
-              value={fixedForm.default_amount} onChange={e => setFixedForm({...fixedForm, default_amount: e.target.value})} 
-            />
+            <InputWrapper>
+              <CostInput 
+                type="text" inputMode="numeric" placeholder="Default Amount" 
+                value={fixedForm.default_amount} onChange={e => handleAmountChange(e, setFixedForm, 'default_amount')} 
+              />
+              <CurrencySymbol>VND</CurrencySymbol>
+            </InputWrapper>
             <Select 
-              style={{ flex: 1, marginBottom: 0 }} 
+              style={{ flex: 1 }} 
               value={fixedForm.category_id} onChange={e => setFixedForm({...fixedForm, category_id: e.target.value})}
             >
               <option value="">No Category</option>
               {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </Select>
-            <Button $variant="primary" onClick={() => createFixedCost.mutate({ ...fixedForm, amount: parseInt(fixedForm.default_amount, 10), categoryId: fixedForm.category_id || null })}>
+            <Button $variant="primary" style={{ flex: 'none' }} onClick={handleFixedCostSubmit}>
               Add
             </Button>
-          </div>
+          </FormRow>
 
           <div>
             {fixedCosts.map(fc => {
-              // check if paid this month
-              const isPaid = expenses.some(e => e.fixed_cost_id === fc.id);
+              const linkedExpense = expenses.find(e => e.fixed_cost_id === fc.id);
+              const isPaid = !!linkedExpense;
               return (
                 <CategoryItem key={fc.id}>
                   <div>
                     <div style={{ color: '#fff', fontWeight: 600 }}>{fc.name}</div>
                     <div style={{ color: '#a1a1aa', fontSize: '0.85rem' }}>{formatter.format(fc.default_amount || 0)} ₫</div>
                   </div>
-                  <Button $variant={isPaid ? undefined : 'primary'} onClick={() => !isPaid && payFixedCost.mutate(fc)} disabled={isPaid}>
-                    {isPaid ? <><CheckCircle2 size={16} /> Paid</> : 'Mark Paid'}
+                  <Button 
+                    $variant={isPaid ? 'danger' : 'primary'} 
+                    onClick={() => isPaid ? deleteExpense.mutate(linkedExpense.id) : payFixedCost.mutate(fc)}
+                  >
+                    {isPaid ? <><X size={16} /> Unpay</> : 'Mark Paid'}
                   </Button>
                 </CategoryItem>
               );
