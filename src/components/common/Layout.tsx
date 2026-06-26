@@ -63,6 +63,11 @@ export const FormRow = styled.div`
   @media (max-width: 768px) {
     flex-direction: column;
     gap: 0.75rem;
+    
+    > * {
+      flex: none !important;
+      width: 100% !important;
+    }
   }
   
   > * {
