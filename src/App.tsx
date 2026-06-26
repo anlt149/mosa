@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthGuard } from './components/AuthGuard';
 import { AppHeader } from './components/AppHeader';
+import { BottomNav } from './components/BottomNav';
 import { FullScreenSpinner } from './components/common';
 import styled from 'styled-components';
 import { Toaster } from 'sonner';
@@ -28,6 +29,7 @@ const AppShell = styled.div`
   flex-direction: column;
   min-height: 100vh;
   width: 100%;
+  padding-bottom: calc(70px + env(safe-area-inset-bottom));
 `;
 
 function App() {
@@ -106,6 +108,7 @@ function App() {
           />
           */}
         </Routes>
+        <BottomNav />
       </Suspense>
       <Toaster theme="dark" richColors position="bottom-right" />
     </BrowserRouter>

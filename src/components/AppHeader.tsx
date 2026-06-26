@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import styled, { keyframes } from 'styled-components';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { LogOut } from 'lucide-react';
 
@@ -32,46 +32,7 @@ const Bar = styled.header`
   }
 `;
 
-const NavTabs = styled.nav`
-  display: flex;
-  gap: 0.25rem;
-  margin-left: 1.5rem;
-  height: 100%;
-  align-items: center;
-  flex-shrink: 0;
 
-  @media (max-width: 480px) {
-    margin-left: 0.5rem;
-    gap: 0.05rem;
-  }
-`;
-
-const NavTabButton = styled.button<{ $active: boolean }>`
-  background: none;
-  border: none;
-  border-bottom: 2px solid ${props => props.$active ? '#10b981' : 'transparent'};
-  color: ${props => props.$active ? '#fff' : '#777'};
-  height: 52px;
-  padding: 0 0.8rem;
-  font-family: inherit;
-  font-size: 0.8rem;
-  font-weight: bold;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  cursor: pointer;
-  transition: all 0.2s;
-  box-sizing: border-box;
-  white-space: nowrap;
-
-  &:hover {
-    color: #fff;
-  }
-
-  @media (max-width: 480px) {
-    font-size: 0.75rem;
-    padding: 0 0.35rem;
-  }
-`;
 
 const Brand = styled.div`
   display: flex;
@@ -183,7 +144,6 @@ export function AppHeader({ onLogout }: AppHeaderProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-  const location = useLocation();
 
   // Close on outside click
   useEffect(() => {
@@ -251,46 +211,6 @@ export function AppHeader({ onLogout }: AppHeaderProps) {
         </BrandLogo>
         <BrandName>mosa</BrandName>
       </Brand>
-      <NavTabs>
-        <NavTabButton
-          $active={location.pathname === '/'}
-          onClick={() => handleNavigate('/')}
-        >
-          Overview
-        </NavTabButton>
-        <NavTabButton
-          $active={location.pathname === '/mood' || location.pathname === '/journal'}
-          onClick={() => handleNavigate('/mood')}
-        >
-          Mood
-        </NavTabButton>
-        <NavTabButton
-          $active={location.pathname === '/habits'}
-          onClick={() => handleNavigate('/habits')}
-        >
-          Habits
-        </NavTabButton>
-        <NavTabButton
-          $active={location.pathname === '/meals'}
-          onClick={() => handleNavigate('/meals')}
-        >
-          Meals
-        </NavTabButton>
-        <NavTabButton
-          $active={location.pathname === '/bills'}
-          onClick={() => handleNavigate('/bills')}
-        >
-          Bills
-        </NavTabButton>
-        {/*
-        <NavTabButton
-          $active={location.pathname === '/year'}
-          onClick={() => handleNavigate('/year')}
-        >
-          Year
-        </NavTabButton>
-        */}
-      </NavTabs>
     </div>
 
       {/* Hamburger menu */}
