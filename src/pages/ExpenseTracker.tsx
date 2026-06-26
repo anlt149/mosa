@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import styled from 'styled-components';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { expenseService, type Expense, type FixedCost } from '../services/expenseService';
-import { Plus, AlertCircle, X, Trash2, Receipt } from 'lucide-react';
+import { Plus, AlertCircle, X, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Card,
@@ -37,7 +37,13 @@ const StatBox = styled.div`
   border: 1px solid #27272a;
 
   .label { color: #a1a1aa; font-size: 0.9rem; margin-bottom: 0.5rem; }
-  .value { color: #fff; font-size: 1.8rem; font-weight: 700; }
+  .value { color: #fff; font-size: 1.8rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  @media (max-width: 480px) {
+    padding: 1rem;
+    .label { font-size: 0.75rem; margin-bottom: 0.25rem; }
+    .value { font-size: 1.25rem; }
+  }
 `;
 
 const MissingDaysAlert = styled.div`
@@ -237,6 +243,20 @@ export function ExpenseTracker() {
     return missing;
   }, [expenses]);
 
+  const recentExpenses = useMemo(() => {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const filtered = expenses.filter(e => new Date(e.log_date) >= sevenDaysAgo);
+
+    const grouped: Record<string, Expense[]> = {};
+    filtered.forEach(e => {
+      if (!grouped[e.log_date]) grouped[e.log_date] = [];
+      grouped[e.log_date].push(e);
+    });
+    
+    return Object.entries(grouped).sort(([d1], [d2]) => d2.localeCompare(d1));
+  }, [expenses]);
+
   const formatter = new Intl.NumberFormat('en-US');
 
   return (
@@ -338,34 +358,26 @@ export function ExpenseTracker() {
           </Button>
 
           <h3 style={{ marginTop: '2rem', marginBottom: '1rem', color: '#fff' }}>Recent Logs</h3>
-          {expenses.map(e => {
-            const cat = categories.find(c => c.id === e.category_id);
-            return (
-              <CategoryItem key={e.id}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <div style={{ width: 40, height: 40, borderRadius: '10px', background: cat ? `${cat.color}20` : '#27272a', color: cat?.color || '#a1a1aa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Receipt size={20} />
-                  </div>
-                  <div>
+          {recentExpenses.map(([date, dayExpenses]) => (
+            <div key={date} style={{ marginBottom: '1.5rem' }}>
+              <div style={{ color: '#a1a1aa', fontSize: '0.85rem', marginBottom: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                {new Date(date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+              </div>
+              {dayExpenses.map(e => {
+                const cat = categories.find(c => c.id === e.category_id);
+                return (
+                  <CategoryItem key={e.id} style={{ background: cat ? `${cat.color}15` : '#18181b', borderColor: cat ? `${cat.color}30` : '#27272a' }}>
                     <div style={{ color: '#fff', fontWeight: 600 }}>{e.name}</div>
-                    <div style={{ color: '#a1a1aa', fontSize: '0.85rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                      <span>{e.log_date}</span>
-                      {cat && (
-                        <>
-                          <span>•</span>
-                          <span style={{ color: cat.color }}>{cat.name}</span>
-                        </>
-                      )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <div style={{ color: cat ? cat.color : '#fff', fontWeight: 700, fontSize: '1.1rem' }}>{formatter.format(e.amount)} ₫</div>
+                      <ActionBtn onClick={() => deleteExpense.mutate(e.id)}><Trash2 size={16} /></ActionBtn>
                     </div>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <div style={{ color: '#fff', fontWeight: 700, fontSize: '1.1rem' }}>{formatter.format(e.amount)} ₫</div>
-                  <ActionBtn onClick={() => deleteExpense.mutate(e.id)}><Trash2 size={16} /></ActionBtn>
-                </div>
-              </CategoryItem>
-            );
-          })}
+                  </CategoryItem>
+                );
+              })}
+            </div>
+          ))}
+          {recentExpenses.length === 0 && <div style={{ color: '#a1a1aa' }}>No recent logs in the last 7 days.</div>}
         </Card>
       )}
 
