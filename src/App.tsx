@@ -16,6 +16,7 @@ const queryClient = new QueryClient({
   },
 });
 
+const Overview = lazy(() => import('./pages/Overview').then(module => ({ default: module.Overview })));
 const Login = lazy(() => import('./pages/Login').then(module => ({ default: module.Login })));
 const Dashboard = lazy(() => import('./pages/Dashboard').then(module => ({ default: module.Dashboard })));
 const Habits = lazy(() => import('./pages/Habits').then(module => ({ default: module.Habits })));
@@ -38,6 +39,17 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route
             path="/"
+            element={
+              <AuthGuard>
+                <AppShell>
+                  <AppHeader />
+                  <Overview />
+                </AppShell>
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/mood"
             element={
               <AuthGuard>
                 <AppShell>

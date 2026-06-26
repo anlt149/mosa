@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import styled, { keyframes } from 'styled-components';
-import { supabase } from '../lib/supabaseClient';
 import { ActivityHeatmap } from '../components/ActivityHeatmap';
 import { WeeklyTrend } from '../components/WeeklyTrend';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { moodService } from '../services/moodService';
 import { AlertCircle, History, Send, Calendar, Battery, HeartPulse, BookOpen } from 'lucide-react';
 import { useVimNavigation } from '../hooks/useVimNavigation';
 
@@ -329,16 +329,6 @@ const NoteText = styled.div`
   white-space: pre-wrap;
 `;
 
-interface DailyLog {
-  id: string;
-  user_id: string;
-  log_date: string;
-  mood_score: number;
-  energy_level: number;
-  note: string | null;
-  created_at: string;
-}
-
 export function Dashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
   const urlDate = searchParams.get('date');
@@ -366,23 +356,7 @@ export function Dashboard() {
 
   const { data: logs = [] } = useQuery({
     queryKey: ['daily_logs'],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
-
-      const pastDate = new Date();
-      pastDate.setDate(pastDate.getDate() - 90);
-      const pastDateStr = `${pastDate.getFullYear()}-${String(pastDate.getMonth() + 1).padStart(2, '0')}-${String(pastDate.getDate()).padStart(2, '0')}`;
-
-      const { data, error } = await supabase
-        .from('daily_logs')
-        .select('*')
-        .gte('log_date', pastDateStr)
-        .order('log_date', { ascending: false });
-
-      if (error) throw error;
-      return data as DailyLog[];
-    }
+    queryFn: () => moodService.getRecentLogs(90)
   });
 
   const todayObj = new Date();
@@ -446,19 +420,8 @@ export function Dashboard() {
   }, [selectedDate, logs, todayStr]);
 
   const submitMutation = useMutation({
-    mutationFn: async (newLog: { log_date: string, mood_score: number, energy_level: number, note: string }) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User session not found.');
-
-      const { error } = await supabase
-        .from('daily_logs')
-        .upsert({
-          user_id: user.id,
-          ...newLog
-        }, { onConflict: 'user_id,log_date' });
-
-      if (error) throw error;
-    },
+    mutationFn: (variables: { mood: number, energy: number, note: string | null }) => 
+      moodService.upsertLog(activeDate, variables.mood, variables.energy, variables.note),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['daily_logs'] });
       toast.success(selectedLog ? 'Log updated successfully.' : 'Log submitted successfully.');
@@ -471,12 +434,11 @@ export function Dashboard() {
 
   const handleSubmit = useCallback(() => {
     submitMutation.mutate({
-      log_date: selectedDate || todayStr,
-      mood_score: mood,
-      energy_level: energy,
+      mood,
+      energy,
       note
     });
-  }, [mood, energy, note, selectedDate, todayStr, submitMutation]);
+  }, [mood, energy, note, submitMutation]);
 
   const handleDateSelect = (dateStr: string) => {
     setSelectedDate(dateStr);

@@ -1,6 +1,8 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import styled, { keyframes } from 'styled-components';
-import { supabase } from '../lib/supabaseClient';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { habitService } from '../services/habitService';
 import { Plus, Trash2, ChevronLeft, ChevronRight, Flame, Check } from 'lucide-react';
 
 /* ── Animations ────────────────────────────────────────────── */
@@ -385,34 +387,28 @@ const ColorBubble = styled.button<{ $color: string; $selected: boolean }>`
   }
 `;
 
-/* ── Types ── */
-interface Habit {
-  id: string;
-  name: string;
-  color: string;
-}
-
-export interface HabitLog {
-  id: string;
-  habit_id: string;
-  log_date: string;
-}
-
 const PRESET_COLORS = [
   '#10b981', '#0ea5e9', '#8b5cf6', '#ec4899', 
   '#f43f5e', '#f97316', '#eab308', '#14b8a6',
 ];
 
 export function Habits() {
-  const [habits, setHabits] = useState<Habit[]>([]);
-  const [logs, setLogs] = useState<HabitLog[]>([]);
   const [showForm, setShowForm] = useState(false);
-  
   const [name, setName] = useState('');
   const [color, setColor] = useState(PRESET_COLORS[0]);
-  const [saving, setSaving] = useState(false);
-
   const [currentMonth, setCurrentMonth] = useState(new Date());
+
+  const queryClient = useQueryClient();
+
+  const { data: habits = [] } = useQuery({
+    queryKey: ['habits'],
+    queryFn: () => habitService.getHabits()
+  });
+
+  const { data: logs = [] } = useQuery({
+    queryKey: ['habit_logs'],
+    queryFn: () => habitService.getHabitLogs(180)
+  });
 
   const handlePrevMonth = () => {
     setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
@@ -427,85 +423,49 @@ export function Habits() {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }, []);
 
-  const fetchData = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+  const createMutation = useMutation({
+    mutationFn: (variables: { name: string, color: string }) => habitService.createHabit(variables.name, variables.color),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['habits'] });
+      setShowForm(false);
+      setName('');
+      toast.success('Habit created.');
+    },
+    onError: () => toast.error('Failed to create habit.')
+  });
 
-    const { data: habitsData } = await supabase
-      .from('habits')
-      .select('*')
-      .order('created_at', { ascending: true });
-    
-    if (habitsData) setHabits(habitsData);
-
-    const startRange = new Date();
-    startRange.setDate(startRange.getDate() - 180);
-    const startStr = `${startRange.getFullYear()}-${String(startRange.getMonth() + 1).padStart(2, '0')}-${String(startRange.getDate()).padStart(2, '0')}`;
-
-    const { data: logsData } = await supabase
-      .from('habit_logs')
-      .select('id, habit_id, log_date')
-      .gte('log_date', startStr);
-
-    if (logsData) setLogs(logsData);
-  }, []);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  const handleCreateHabit = async (e: React.FormEvent) => {
+  const handleCreateHabit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-
-    setSaving(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data, error } = await supabase
-        .from('habits')
-        .insert({ user_id: user.id, name: name.trim(), color })
-        .select();
-      
-      if (!error && data) {
-        setHabits([...habits, data[0]]);
-        setName('');
-        setShowForm(false);
-      }
-    }
-    setSaving(false);
+    createMutation.mutate({ name: name.trim(), color });
   };
 
-  const handleDeleteHabit = async (id: string) => {
+  const deleteMutation = useMutation({
+    mutationFn: habitService.deleteHabit,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['habits'] });
+      queryClient.invalidateQueries({ queryKey: ['habit_logs'] });
+      toast.success('Habit deleted.');
+    },
+    onError: () => toast.error('Failed to delete habit.')
+  });
+
+  const handleDeleteHabit = (id: string) => {
     if (!confirm('Are you sure you want to delete this habit and all its history?')) return;
-    const { error } = await supabase.from('habits').delete().eq('id', id);
-    if (!error) {
-      setHabits(habits.filter(h => h.id !== id));
-      setLogs(logs.filter(l => l.habit_id !== id));
-    }
+    deleteMutation.mutate(id);
   };
 
-  const handleToggleLog = async (habitId: string, dateStr: string) => {
-    const existingLog = logs.find(l => l.habit_id === habitId && l.log_date === dateStr);
-
-    if (existingLog) {
-      setLogs(prev => prev.filter(l => l.id !== existingLog.id));
-      const { error } = await supabase.from('habit_logs').delete().eq('id', existingLog.id);
-      if (error) fetchData();
-    } else {
-      const tempId = crypto.randomUUID();
-      const newLog = { id: tempId, habit_id: habitId, log_date: dateStr };
-      setLogs(prev => [...prev, newLog]);
-      const { data, error } = await supabase
-        .from('habit_logs')
-        .insert({ habit_id: habitId, log_date: dateStr })
-        .select();
-      
-      if (error) {
-        fetchData();
-      } else if (data) {
-        setLogs(prev => prev.map(l => l.id === tempId ? data[0] : l));
-      }
+  const toggleMutation = useMutation({
+    mutationFn: (variables: { habitId: string, dateStr: string, existingLogId?: string }) => 
+      habitService.toggleHabitLog(variables.habitId, variables.dateStr, variables.existingLogId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['habit_logs'] });
     }
+  });
+
+  const handleToggleLog = (habitId: string, dateStr: string) => {
+    const existingLog = logs.find(l => l.habit_id === habitId && l.log_date === dateStr);
+    toggleMutation.mutate({ habitId, dateStr, existingLogId: existingLog?.id });
   };
 
   const calendarDays = useMemo(() => {
@@ -621,7 +581,7 @@ export function Habits() {
               </ColorGrid>
             </FormGroup>
             <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
-              <SubmitButton type="submit" disabled={saving || !name.trim()} style={{ width: '120px', margin: 0, padding: '0.85rem' }}>
+              <SubmitButton type="submit" disabled={createMutation.isPending || !name.trim()} style={{ width: '120px', margin: 0, padding: '0.85rem' }}>
                 Save
               </SubmitButton>
               <SubmitButton

@@ -253,8 +253,14 @@ export function AppHeader({ onLogout }: AppHeaderProps) {
       </Brand>
       <NavTabs>
         <NavTabButton
-          $active={location.pathname === '/' || location.pathname === '/journal'}
+          $active={location.pathname === '/'}
           onClick={() => handleNavigate('/')}
+        >
+          Overview
+        </NavTabButton>
+        <NavTabButton
+          $active={location.pathname === '/mood' || location.pathname === '/journal'}
+          onClick={() => handleNavigate('/mood')}
         >
           Mood
         </NavTabButton>
