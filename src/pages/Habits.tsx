@@ -1,135 +1,23 @@
 import { useState, useMemo, useCallback } from 'react';
-import styled, { keyframes } from 'styled-components';
+import styled from 'styled-components';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { habitService } from '../services/habitService';
 import { Plus, Trash2, ChevronLeft, ChevronRight, Flame, Check } from 'lucide-react';
+import {
+  PageContainer,
+  PageHeader,
+  PageTitle,
+  Grid as DashboardGrid,
+  Card,
+  Button,
+  ActionBtn,
+  Input,
+  Label
+} from '../components/common';
 
-/* ── Animations ────────────────────────────────────────────── */
-const fadeIn = keyframes`
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
-`;
 
-/* ── Identical Layout to Dashboard ─────────────────────────── */
-const PageContainer = styled.div`
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem 1rem;
-  box-sizing: border-box;
-  animation: ${fadeIn} 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-`;
 
-const Header = styled.div`
-  margin-bottom: 2.5rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  flex-wrap: wrap;
-  gap: 1rem;
-`;
-
-const Title = styled.h1`
-  font-size: 2rem;
-  font-weight: 700;
-  color: #fff;
-  margin: 0;
-  letter-spacing: -0.02em;
-
-  span {
-    color: #10b981;
-  }
-`;
-
-const DashboardGrid = styled.div`
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 2rem;
-  width: 100%;
-  min-width: 0;
-
-  @media (min-width: 768px) {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  @media (min-width: 1200px) {
-    grid-template-columns: repeat(3, 1fr);
-  }
-`;
-
-const Card = styled.div`
-  background: #09090b;
-  border: 1px solid #27272a;
-  border-radius: 16px;
-  padding: 1.5rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  position: relative;
-  overflow: hidden;
-
-  /* Subtle inner glow for premium feel */
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
-  }
-`;
-
-const ActionButton = styled.button`
-  background: #18181b;
-  color: #a1a1aa;
-  border: 1px solid #27272a;
-  padding: 0.5rem 0.75rem;
-  border-radius: 8px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  transition: all 0.2s ease;
-
-  &:hover:not(:disabled) {
-    background: #27272a;
-    color: #fff;
-    border-color: #3f3f46;
-  }
-`;
-
-const SubmitButton = styled.button`
-  width: 100%;
-  background: #10b981;
-  color: #000;
-  border: none;
-  border-radius: 12px;
-  padding: 1.25rem;
-  font-size: 1rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  cursor: pointer;
-  margin-top: 1.5rem;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-
-  &:hover:not(:disabled) {
-    background: #34d399;
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
-  }
-
-  &:disabled {
-    background: #27272a;
-    color: #52525b;
-    cursor: not-allowed;
-  }
-`;
 
 /* ── Habit Specific Styling ───────────────────────────────── */
 const ControlsRow = styled.div`
@@ -208,20 +96,8 @@ const HabitCardName = styled.h3`
   letter-spacing: -0.01em;
 `;
 
-const DeleteButton = styled.button`
-  background: none;
-  border: none;
-  color: #52525b;
-  cursor: pointer;
+const DeleteButton = styled(ActionBtn)`
   padding: 0.25rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.15s;
-
-  &:hover {
-    color: #ef4444;
-  }
 `;
 
 /* ── Calendar Grid (Matching Heatmap Aesthetic) ── */
@@ -342,30 +218,7 @@ const FormGroup = styled.div`
   gap: 0.5rem;
 `;
 
-const Label = styled.label`
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  color: #a1a1aa;
-  letter-spacing: 0.05em;
-  font-weight: 600;
-`;
 
-const Input = styled.input`
-  background: #18181b;
-  border: 1px solid #3f3f46;
-  color: #fff;
-  padding: 0.85rem;
-  font-family: inherit;
-  font-size: 0.95rem;
-  border-radius: 8px;
-  transition: all 0.2s;
-
-  &:focus {
-    outline: none;
-    border-color: #10b981;
-    box-shadow: 0 0 0 1px #10b981;
-  }
-`;
 
 const ColorGrid = styled.div`
   display: grid;
@@ -528,9 +381,9 @@ export function Habits() {
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   return (
-    <PageContainer>
-      <Header>
-        <Title>Habit <span>Tracker</span></Title>
+    <PageContainer style={{ animation: 'none' }}>
+      <PageHeader style={{ flexWrap: 'wrap', gap: '1rem' }}>
+        <PageTitle>Habit <span>Tracker</span></PageTitle>
         <ControlsRow>
           <MonthSelector>
             <NavButton onClick={handlePrevMonth} aria-label="Previous month">
@@ -543,12 +396,12 @@ export function Habits() {
           </MonthSelector>
 
           {!showForm && (
-            <ActionButton onClick={() => setShowForm(true)}>
+            <Button $variant="outline" onClick={() => setShowForm(true)} style={{ padding: '0.5rem 0.75rem', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               <Plus size={16} /> Add Habit
-            </ActionButton>
+            </Button>
           )}
         </ControlsRow>
-      </Header>
+      </PageHeader>
 
       {showForm && (
         <AddFormContainer>
@@ -581,16 +434,17 @@ export function Habits() {
               </ColorGrid>
             </FormGroup>
             <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
-              <SubmitButton type="submit" disabled={createMutation.isPending || !name.trim()} style={{ width: '120px', margin: 0, padding: '0.85rem' }}>
+              <Button $variant="primary" type="submit" disabled={createMutation.isPending || !name.trim()} style={{ width: '120px', margin: 0, padding: '0.85rem' }}>
                 Save
-              </SubmitButton>
-              <SubmitButton
+              </Button>
+              <Button
+                $variant="outline"
                 type="button"
-                style={{ width: '120px', margin: 0, padding: '0.85rem', background: 'transparent', color: '#a1a1aa', border: '1px solid #3f3f46' }}
+                style={{ width: '120px', margin: 0, padding: '0.85rem' }}
                 onClick={() => { setShowForm(false); setName(''); }}
               >
                 Cancel
-              </SubmitButton>
+              </Button>
             </div>
           </Form>
         </AddFormContainer>

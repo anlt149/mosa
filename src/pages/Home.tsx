@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
-import { Container, MainContent } from '../components/common';
+import { PageContainer, PageHeader, Grid } from '../components/common';
 import { BookOpen, LayoutGrid, ArrowRight, Activity, Zap, Smile, CheckSquare } from 'lucide-react';
 
 /* ── Animations ────────────────────────────────────────────── */
@@ -12,35 +12,24 @@ const fadeIn = keyframes`
   to { opacity: 1; transform: translateY(0); }
 `;
 
-/* ── Styled Components ─────────────────────────────────────── */
-
-const WelcomeSection = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-bottom: 2rem;
-  animation: ${fadeIn} 0.5s ease-out;
-`;
 
 const Greeting = styled.h1`
   font-size: 2rem;
-  font-weight: normal;
-  letter-spacing: 0.05em;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   color: #fff;
   margin: 0;
-  text-transform: uppercase;
   
   span {
     color: #10b981;
-    font-weight: bold;
   }
 `;
 
 const Subtitle = styled.p`
   font-size: 0.95rem;
-  color: #888;
+  color: #a1a1aa;
   margin: 0;
-  letter-spacing: 0.05em;
+  margin-top: 0.5rem;
 `;
 
 /* ── Minimal Dashboard Quick Stats ──────────────────────────── */
@@ -81,19 +70,7 @@ const MiniStatValue = styled.div`
   color: #fff;
 `;
 
-/* ── Feature Cards Grid ─────────────────────────────────────── */
 
-const CardsGrid = styled.div`
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 2rem;
-  width: 100%;
-  animation: ${fadeIn} 0.7s ease-out;
-
-  @media (min-width: 768px) {
-    grid-template-columns: 1fr 1fr;
-  }
-`;
 
 const FeatureCard = styled.div<{ $glowColor: string }>`
   background: #111;
@@ -270,14 +247,13 @@ export function Home() {
   }, [logs]);
 
   return (
-    <Container>
-      <MainContent style={{ maxWidth: '960px' }}>
-        <WelcomeSection>
-          <Greeting>
-            Hello, <span>{userName || 'User'}</span>
-          </Greeting>
-          <Subtitle>Welcome back to Mosa. Choose a workspace below to get started.</Subtitle>
-        </WelcomeSection>
+    <PageContainer style={{ maxWidth: '960px' }}>
+      <PageHeader style={{ flexDirection: 'column', alignItems: 'flex-start', marginBottom: '2rem' }}>
+        <Greeting>
+          Hello, <span>{userName || 'User'}</span>
+        </Greeting>
+        <Subtitle>Welcome back to Mosa. Choose a workspace below to get started.</Subtitle>
+      </PageHeader>
 
         {/* Aggregate Quick Stats */}
         {!loading && (
@@ -309,8 +285,8 @@ export function Home() {
         )}
 
         {/* Feature selection cards */}
-        <CardsGrid>
-          <FeatureCard 
+        <Grid $cols={2} style={{ animation: `${fadeIn} 0.7s ease-out` }}>
+          <FeatureCard  
             $glowColor="#10b981" 
             onClick={() => navigate('/journal')}
           >
@@ -366,8 +342,7 @@ export function Home() {
               <ArrowRight size={14} className="action-arrow" />
             </CardAction>
           </FeatureCard>
-        </CardsGrid>
-      </MainContent>
-    </Container>
+        </Grid>
+    </PageContainer>
   );
 }

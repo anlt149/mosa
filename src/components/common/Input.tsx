@@ -1,55 +1,87 @@
 import styled from 'styled-components';
 
 export const Input = styled.input`
-  background-color: #000;
-  color: #fff;
-  border: 1px solid #333;
-  padding: 0.75rem 1rem;
-  font-family: inherit;
-  font-size: 1rem;
   width: 100%;
+  background: #18181b;
+  border: 1px solid #27272a;
+  border-radius: 8px;
+  padding: 0.75rem;
+  color: #fff;
   box-sizing: border-box;
-  outline: none;
   transition: border-color 0.2s;
 
   &:focus {
-    border-color: #fff;
+    outline: none;
+    border-color: #3b82f6;
   }
 
   &::placeholder {
-    color: #666;
+    color: #71717a;
+  }
+`;
+
+export const Select = styled.select`
+  width: 100%;
+  background: #18181b;
+  border: 1px solid #27272a;
+  border-radius: 8px;
+  padding: 0.75rem;
+  color: #fff;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+
+  &:focus {
+    outline: none;
+    border-color: #3b82f6;
   }
 `;
 
 export const TextArea = styled.textarea`
-  background-color: #000;
-  color: #fff;
-  border: 1px solid #333;
-  padding: 0.75rem 1rem;
-  font-family: inherit;
-  font-size: 1rem;
   width: 100%;
+  background: #18181b;
+  border: 1px solid #27272a;
+  border-radius: 8px;
+  padding: 0.75rem;
+  color: #fff;
   box-sizing: border-box;
   min-height: 120px;
   resize: vertical;
-  outline: none;
   transition: border-color 0.2s;
 
   &:focus {
-    border-color: #fff;
+    outline: none;
+    border-color: #3b82f6;
   }
 
   &::placeholder {
-    color: #666;
+    color: #71717a;
   }
 `;
 
 export const Label = styled.label`
   display: block;
-  font-size: 0.875rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: #aaa;
+  font-size: 0.9rem;
+  color: #a1a1aa;
   margin-bottom: 0.5rem;
+  font-weight: 500;
 `;
 
+export const InputWrapper = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  flex: 1;
+`;
+
+export const CurrencySymbol = styled.span`
+  position: absolute;
+  right: 1rem;
+  color: #a1a1aa;
+  font-weight: 500;
+  pointer-events: none;
+`;
+
+export const CostInput = styled(Input)`
+  padding-right: 3rem;
+`;

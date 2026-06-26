@@ -4,56 +4,22 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { expenseService, type Expense, type FixedCost } from '../services/expenseService';
 import { Plus, AlertCircle, X, Trash2, Receipt } from 'lucide-react';
 import { toast } from 'sonner';
-
-const PageContainer = styled.div`
-  width: 100%;
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 1.5rem 1rem;
-`;
-
-const Header = styled.div`
-  margin-bottom: 2rem;
-  h1 {
-    font-size: 2rem;
-    font-weight: 700;
-    margin: 0;
-    color: #fff;
-    span { color: #3b82f6; }
-  }
-`;
-
-const TabContainer = styled.div`
-  display: flex;
-  background: #18181b;
-  border-radius: 12px;
-  padding: 4px;
-  margin-bottom: 2rem;
-`;
-
-const Tab = styled.button<{ $active: boolean }>`
-  flex: 1;
-  padding: 0.75rem;
-  border-radius: 8px;
-  border: none;
-  background: ${({ $active }) => $active ? '#27272a' : 'transparent'};
-  color: ${({ $active }) => $active ? '#fff' : '#a1a1aa'};
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  
-  &:hover {
-    color: #fff;
-  }
-`;
-
-const Card = styled.div`
-  background: #09090b;
-  border: 1px solid #27272a;
-  border-radius: 16px;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
-`;
+import {
+  Card,
+  Button,
+  ActionBtn,
+  Input,
+  Select,
+  FormRow,
+  InputWrapper,
+  CostInput,
+  CurrencySymbol,
+  PageContainer,
+  PageHeader,
+  PageTitle,
+  TabContainer,
+  Tab
+} from '../components/common';
 
 const SummaryGrid = styled.div`
   display: grid;
@@ -112,110 +78,7 @@ const ProgressFill = styled.div<{ $percent: number; $color: string }>`
   background: ${({ $color }) => $color};
 `;
 
-const Button = styled.button<{ $variant?: 'primary' | 'danger' }>`
-  background: ${({ $variant }) => $variant === 'primary' ? '#3b82f6' : $variant === 'danger' ? '#ef4444' : '#27272a'};
-  color: #fff;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
 
-  &:hover {
-    opacity: 0.9;
-  }
-`;
-
-const ActionBtn = styled.button`
-  background: none;
-  border: none;
-  color: #71717a;
-  cursor: pointer;
-  padding: 0.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-
-  &:hover {
-    color: #ef4444;
-    background: #27272a;
-  }
-`;
-
-const Input = styled.input`
-  width: 100%;
-  background: #18181b;
-  border: 1px solid #27272a;
-  border-radius: 8px;
-  padding: 0.75rem;
-  color: #fff;
-  margin-bottom: 1rem;
-  box-sizing: border-box;
-
-  &:focus {
-    outline: none;
-    border-color: #3b82f6;
-  }
-`;
-
-const Select = styled.select`
-  width: 100%;
-  background: #18181b;
-  border: 1px solid #27272a;
-  border-radius: 8px;
-  padding: 0.75rem;
-  color: #fff;
-  margin-bottom: 1rem;
-  box-sizing: border-box;
-
-  &:focus {
-    outline: none;
-    border-color: #3b82f6;
-  }
-`;
-
-const FormRow = styled.div`
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-  margin-top: 1rem;
-  margin-bottom: 2rem;
-  
-  @media (max-width: 768px) {
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-  
-  > * {
-    margin-bottom: 0 !important;
-  }
-`;
-
-const InputWrapper = styled.div`
-  position: relative;
-  display: flex;
-  align-items: center;
-  width: 100%;
-  flex: 1;
-`;
-
-const CurrencySymbol = styled.span`
-  position: absolute;
-  right: 1rem;
-  color: #a1a1aa;
-  font-weight: 500;
-  pointer-events: none;
-`;
-
-const CostInput = styled(Input)`
-  padding-right: 3rem;
-  margin-bottom: 0 !important;
-`;
 
 const getMonthRange = () => {
   const d = new Date();
@@ -303,6 +166,24 @@ export function ExpenseTracker() {
     }
   });
 
+  const deleteCategoryMutation = useMutation({
+    mutationFn: expenseService.deleteCategory,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['expense_categories'] });
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['fixed_costs'] });
+      toast.success('Category removed');
+    }
+  });
+
+  const deleteFixedCostMutation = useMutation({
+    mutationFn: expenseService.deleteFixedCost,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['fixed_costs'] });
+      toast.success('Fixed cost removed');
+    }
+  });
+
   const handleExpenseSubmit = () => {
     const amount = parseInt(expenseForm.amount.replace(/\D/g, ''), 10);
     if (!expenseForm.name.trim()) return toast.error('Please enter an expense name');
@@ -359,10 +240,10 @@ export function ExpenseTracker() {
   const formatter = new Intl.NumberFormat('en-US');
 
   return (
-    <PageContainer>
-      <Header>
-        <h1>Expense <span>Tracker</span></h1>
-      </Header>
+    <PageContainer style={{ maxWidth: '800px' }}>
+      <PageHeader>
+        <PageTitle>Expense <span>Tracker</span></PageTitle>
+      </PageHeader>
 
       <TabContainer>
         <Tab $active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')}>Dashboard</Tab>
@@ -522,6 +403,11 @@ export function ExpenseTracker() {
                     <div style={{ color: '#a1a1aa', fontSize: '0.85rem' }}>Budget: {formatter.format(c.monthly_budget)} ₫</div>
                   </div>
                 </div>
+                <ActionBtn onClick={() => {
+                  if (window.confirm('Delete this category? Related expenses will become uncategorized.')) {
+                    deleteCategoryMutation.mutate(c.id);
+                  }
+                }}><Trash2 size={16} /></ActionBtn>
               </CategoryItem>
             ))}
           </div>
@@ -567,12 +453,19 @@ export function ExpenseTracker() {
                     <div style={{ color: '#fff', fontWeight: 600 }}>{fc.name}</div>
                     <div style={{ color: '#a1a1aa', fontSize: '0.85rem' }}>{formatter.format(fc.default_amount || 0)} ₫</div>
                   </div>
-                  <Button 
-                    $variant={isPaid ? 'danger' : 'primary'} 
-                    onClick={() => isPaid ? deleteExpense.mutate(linkedExpense.id) : payFixedCost.mutate(fc)}
-                  >
-                    {isPaid ? <><X size={16} /> Unpay</> : 'Mark Paid'}
-                  </Button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Button 
+                      $variant={isPaid ? 'danger' : 'primary'} 
+                      onClick={() => isPaid ? deleteExpense.mutate(linkedExpense.id) : payFixedCost.mutate(fc)}
+                    >
+                      {isPaid ? <><X size={16} /> Unpay</> : 'Mark Paid'}
+                    </Button>
+                    <ActionBtn onClick={() => {
+                      if (window.confirm('Delete this fixed cost?')) {
+                        deleteFixedCostMutation.mutate(fc.id);
+                      }
+                    }}><Trash2 size={16} /></ActionBtn>
+                  </div>
                 </CategoryItem>
               );
             })}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import styled, { keyframes } from 'styled-components';
+import styled from 'styled-components';
 import { ActivityHeatmap } from '../components/ActivityHeatmap';
 import { WeeklyTrend } from '../components/WeeklyTrend';
 import { useSearchParams } from 'react-router-dom';
@@ -8,82 +8,18 @@ import { toast } from 'sonner';
 import { moodService } from '../services/moodService';
 import { AlertCircle, History, Send, Calendar, Battery, HeartPulse, BookOpen } from 'lucide-react';
 import { useVimNavigation } from '../hooks/useVimNavigation';
+import {
+  PageContainer,
+  PageHeader,
+  PageTitle,
+  Grid as DashboardGrid,
+  Column,
+  Card
+} from '../components/common';
 
-/* ── Animations ──────────────────────────────────────────────── */
-const fadeIn = keyframes`
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
-`;
 
 /* ── Layout ─────────────────────────────────────────────────── */
-const PageContainer = styled.div`
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem 1rem;
-  box-sizing: border-box;
-  animation: ${fadeIn} 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-`;
 
-const Header = styled.div`
-  margin-bottom: 2.5rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-`;
-
-const Title = styled.h1`
-  font-size: 2rem;
-  font-weight: 700;
-  color: #fff;
-  margin: 0;
-  letter-spacing: -0.02em;
-
-  span {
-    color: #10b981;
-  }
-`;
-
-const DashboardGrid = styled.div`
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 2rem;
-  width: 100%;
-  
-  /* Ensure grids never overflow their containers */
-  min-width: 0;
-
-  @media (min-width: 1024px) {
-    grid-template-columns: 1fr 1fr;
-    align-items: start;
-  }
-`;
-
-const Column = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-  min-width: 0; /* Crucial for preventing flex/grid overflow */
-`;
-
-/* ── Premium Cards ──────────────────────────────────────────── */
-const Card = styled.div`
-  background: #09090b;
-  border: 1px solid #27272a;
-  border-radius: 16px;
-  padding: 1.5rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  position: relative;
-  overflow: hidden;
-
-  /* Subtle inner glow for premium feel */
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
-  }
-`;
 
 /* ── Alert ──────────────────────────────────────────────────── */
 const AlertBanner = styled.div`
@@ -456,10 +392,10 @@ export function Dashboard() {
   };
 
   return (
-    <PageContainer>
-      <Header>
-        <Title>Mood <span>Tracker</span></Title>
-      </Header>
+    <PageContainer style={{ animation: 'none' }}>
+      <PageHeader>
+        <PageTitle>Mood <span>Tracker</span></PageTitle>
+      </PageHeader>
 
       {missedDaysThisWeek.length > 0 && (
         <AlertBanner>

@@ -1,46 +1,20 @@
 import { useState, useMemo } from 'react';
-import styled, { keyframes } from 'styled-components';
+import styled from 'styled-components';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { taskService } from '../services/taskService';
 import { Plus, Trash2, CheckCircle2, Circle, ChevronLeft, ChevronRight, Edit2, X, Check } from 'lucide-react';
+import {
+  PageContainer,
+  PageHeader,
+  PageTitle,
+  Card,
+  Input,
+  Button
+} from '../components/common';
 
-/* ── Animations ────────────────────────────────────────────── */
-const fadeIn = keyframes`
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
-`;
 
-/* ── Layout ─────────────────────────── */
-const PageContainer = styled.div`
-  width: 100%;
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 2rem 1rem;
-  box-sizing: border-box;
-  animation: ${fadeIn} 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-`;
 
-const Header = styled.div`
-  margin-bottom: 2.5rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  flex-wrap: wrap;
-  gap: 1rem;
-`;
-
-const Title = styled.h1`
-  font-size: 2rem;
-  font-weight: 700;
-  color: #fff;
-  margin: 0;
-  letter-spacing: -0.02em;
-
-  span {
-    color: #3b82f6;
-  }
-`;
 
 const DateSelector = styled.div`
   display: flex;
@@ -81,22 +55,7 @@ const DateLabel = styled.span`
   text-align: center;
 `;
 
-const Card = styled.div`
-  background: #09090b;
-  border: 1px solid #27272a;
-  border-radius: 16px;
-  padding: 1.5rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  position: relative;
-  overflow: hidden;
 
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(59,130,246,0.5), transparent);
-  }
-`;
 
 const AddTaskForm = styled.form`
   display: flex;
@@ -104,48 +63,7 @@ const AddTaskForm = styled.form`
   margin-bottom: 2rem;
 `;
 
-const Input = styled.input`
-  flex: 1;
-  background: #18181b;
-  border: 1px solid #3f3f46;
-  color: #fff;
-  padding: 1rem;
-  font-family: inherit;
-  font-size: 1rem;
-  border-radius: 12px;
-  transition: all 0.2s;
 
-  &:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 1px #3b82f6;
-  }
-`;
-
-const AddButton = styled.button`
-  background: #3b82f6;
-  color: #fff;
-  border: none;
-  border-radius: 12px;
-  padding: 0 1.5rem;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  transition: all 0.2s;
-
-  &:hover:not(:disabled) {
-    background: #2563eb;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-`;
 
 const TaskList = styled.div`
   display: flex;
@@ -328,15 +246,15 @@ export function Tasks() {
   }, [tasks]);
 
   return (
-    <PageContainer>
-      <Header>
-        <Title>Daily <span>Tasks</span></Title>
+    <PageContainer style={{ animation: 'none', maxWidth: '800px' }}>
+      <PageHeader style={{ flexWrap: 'wrap', gap: '1rem' }}>
+        <PageTitle>Daily <span>Tasks</span></PageTitle>
         <DateSelector>
           <NavButton onClick={handlePrevDay} aria-label="Previous day"><ChevronLeft size={16} /></NavButton>
           <DateLabel>{dateLabel}</DateLabel>
           <NavButton onClick={handleNextDay} aria-label="Next day"><ChevronRight size={16} /></NavButton>
         </DateSelector>
-      </Header>
+      </PageHeader>
 
       <Card>
         <AddTaskForm onSubmit={handleAddTask}>
@@ -346,10 +264,11 @@ export function Tasks() {
             value={newTaskName}
             onChange={(e) => setNewTaskName(e.target.value)}
             disabled={createMutation.isPending}
+            style={{ borderRadius: '12px' }}
           />
-          <AddButton type="submit" disabled={!newTaskName.trim() || createMutation.isPending}>
+          <Button $variant="primary" type="submit" disabled={!newTaskName.trim() || createMutation.isPending} style={{ padding: '0 1.5rem', borderRadius: '12px' }}>
             <Plus size={20} /> Add
-          </AddButton>
+          </Button>
         </AddTaskForm>
 
         {isLoading ? (

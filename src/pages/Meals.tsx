@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import styled, { keyframes } from 'styled-components';
+import styled from 'styled-components';
 import { MealTracker } from '../components/MealTracker';
 import { MealHeatmap } from '../components/MealHeatmap';
 import { MealAnalytics } from '../components/MealAnalytics';
@@ -7,76 +7,19 @@ import { mealService, type Meal } from '../services/mealService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Home, UtensilsCrossed, TrendingUp, CalendarDays, Settings, Trash2, Edit2, CheckCircle2 } from 'lucide-react';
+import {
+  PageContainer,
+  PageHeader,
+  PageTitle,
+  Grid as DashboardGrid,
+  Column,
+  Card,
+  ActionBtn,
+  Input
+} from '../components/common';
 
-const fadeIn = keyframes`
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
-`;
 
-const PageContainer = styled.div`
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem 1rem;
-  box-sizing: border-box;
-  animation: ${fadeIn} 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-`;
 
-const Header = styled.div`
-  margin-bottom: 2.5rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-`;
-
-const Title = styled.h1`
-  font-size: 2rem;
-  font-weight: 700;
-  color: #fff;
-  margin: 0;
-  letter-spacing: -0.02em;
-
-  span {
-    color: #10b981;
-  }
-`;
-
-const DashboardGrid = styled.div`
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 2rem;
-  width: 100%;
-  min-width: 0;
-
-  @media (min-width: 1024px) {
-    grid-template-columns: 1fr 1fr;
-    align-items: start;
-  }
-`;
-
-const Column = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-  min-width: 0;
-`;
-
-const Card = styled.div`
-  background: #09090b;
-  border: 1px solid #27272a;
-  border-radius: 16px;
-  padding: 1.5rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  position: relative;
-  overflow: hidden;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
-  }
-`;
 
 const HistoryList = styled.div`
   display: flex;
@@ -157,22 +100,7 @@ const ActionButtons = styled.div`
   }
 `;
 
-const ActionBtn = styled.button`
-  background: none;
-  border: none;
-  color: #71717a;
-  cursor: pointer;
-  padding: 0.25rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
 
-  &:hover {
-    color: #fff;
-    background: #27272a;
-  }
-`;
 
 const SummaryBanner = styled.div`
   display: flex;
@@ -250,18 +178,8 @@ const BudgetInputWrapper = styled.div`
   margin-top: 0.5rem;
 
   input {
-    background: #18181b;
-    border: 1px solid #3f3f46;
-    border-radius: 6px;
-    padding: 0.4rem 0.5rem;
-    color: #fff;
-    font-size: 0.9rem;
-    width: 120px;
-    outline: none;
-
-    &:focus {
-      border-color: #10b981;
-    }
+    flex: 1;
+    min-width: 100px;
   }
 
   button {
@@ -385,12 +303,12 @@ export function Meals() {
   const budgetPercent = budget ? (monthSpent / budget) * 100 : 0;
 
   return (
-    <PageContainer>
-      <Header>
-        <Title>
+    <PageContainer style={{ animation: 'none' }}>
+      <PageHeader>
+        <PageTitle>
           Meal <span>Tracker</span>
-        </Title>
-      </Header>
+        </PageTitle>
+      </PageHeader>
 
       <div style={{ marginBottom: '2rem' }}>
         <MealTracker 
@@ -426,7 +344,8 @@ export function Meals() {
           
           {isEditingBudget ? (
             <BudgetInputWrapper>
-              <input 
+              <Input 
+                style={{ marginBottom: 0 }}
                 type="text" 
                 value={budgetInput} 
                 onChange={handleBudgetChange} 
