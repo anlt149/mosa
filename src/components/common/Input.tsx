@@ -2,6 +2,8 @@ import styled from 'styled-components';
 
 export const Input = styled.input`
   width: 100%;
+  min-width: 0;
+  appearance: none;
   background: #18181b;
   border: 1px solid #27272a;
   border-radius: 8px;
@@ -22,6 +24,8 @@ export const Input = styled.input`
 
 export const Select = styled.select`
   width: 100%;
+  min-width: 0;
+  appearance: none;
   background: #18181b;
   border: 1px solid #27272a;
   border-radius: 8px;
