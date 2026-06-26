@@ -99,12 +99,12 @@ export function BottomNav() {
       </NavItem>
 
       <NavItem 
-        $active={path === '/bills'} 
-        onClick={() => navigate('/bills')}
-        aria-label="Bills"
+        $active={path === '/expenses'} 
+        onClick={() => navigate('/expenses')}
+        aria-label="Expenses"
       >
-        <Receipt size={22} strokeWidth={path === '/bills' ? 2.5 : 2} />
-        <Label $active={path === '/bills'}>Bills</Label>
+        <Receipt size={22} strokeWidth={path === '/expenses' ? 2.5 : 2} />
+        <Label $active={path === '/expenses'}>Expenses</Label>
       </NavItem>
 
       <NavItem 

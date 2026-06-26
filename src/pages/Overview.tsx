@@ -182,9 +182,15 @@ const ProgressFill = styled.div<{ $percent: number; $color: string }>`
 `;
 
 // Helper
-const getMonthKey = () => {
+const getMonthRange = () => {
   const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const lastDay = new Date(year, d.getMonth() + 1, 0).getDate();
+  return {
+    start: `${year}-${month}-01`,
+    end: `${year}-${month}-${lastDay}`
+  };
 };
 
 export function Overview() {
@@ -216,15 +222,15 @@ export function Overview() {
     queryFn: mealService.getUserSettings
   });
 
-  const { data: fixedCosts = [] } = useQuery({
-    queryKey: ['fixed_costs'],
-    queryFn: expenseService.getFixedCosts
+  const monthRange = getMonthRange();
+  const { data: expenses = [] } = useQuery({
+    queryKey: ['expenses', monthRange.start, monthRange.end],
+    queryFn: () => expenseService.getExpensesByDateRange(monthRange.start, monthRange.end)
   });
 
-  const currentMonthKey = getMonthKey();
-  const { data: costRecords = [] } = useQuery({
-    queryKey: ['cost_records', currentMonthKey],
-    queryFn: () => expenseService.getCostRecords(currentMonthKey)
+  const { data: categories = [] } = useQuery({
+    queryKey: ['expense_categories'],
+    queryFn: expenseService.getCategories
   });
 
   const todayStr = useMemo(() => {
@@ -285,17 +291,12 @@ export function Overview() {
     return { spent: monthSpent, budget, percent };
   }, [allMeals, userSettings]);
 
-  // Bills
-  const billStats = useMemo(() => {
-    let planned = 0, paid = 0;
-    fixedCosts.forEach(fc => {
-      planned += fc.default_amount || 0;
-      const record = costRecords.find(r => r.fixed_cost_id === fc.id);
-      const actualVal = record?.actual_amount ?? fc.default_amount ?? 0;
-      if (record?.is_paid) paid += actualVal;
-    });
-    return { planned, paid, percent: planned > 0 ? (paid / planned) * 100 : 0 };
-  }, [fixedCosts, costRecords]);
+  // Expenses
+  const expenseStats = useMemo(() => {
+    let planned = categories.reduce((sum, cat) => sum + cat.monthly_budget, 0);
+    let spent = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+    return { planned, spent, percent: planned > 0 ? (spent / planned) * 100 : 0 };
+  }, [categories, expenses]);
 
   const formatter = new Intl.NumberFormat('en-US');
 
@@ -379,18 +380,18 @@ export function Overview() {
           </div>
         </SummaryCard>
 
-        {/* Bills Card */}
-        <SummaryCard $color="#3b82f6" onClick={() => navigate('/bills')}>
+        {/* Expenses Card */}
+        <SummaryCard $color="#3b82f6" onClick={() => navigate('/expenses')}>
           <CardHeader>
             <CardIconWrapper $color="#3b82f6"><Receipt size={24} /></CardIconWrapper>
             <ChevronRight size={20} color="#52525b" className="arrow-icon" style={{ transition: 'all 0.2s' }} />
           </CardHeader>
           <div>
-            <CardTitle style={{ marginBottom: '0.5rem' }}>Fixed Costs</CardTitle>
-            <CardValue style={{ fontSize: '2rem' }}>{formatter.format(billStats.paid)} <span style={{ fontSize: '1.25rem', color: '#52525b' }}>/ {formatter.format(billStats.planned)} ₫</span></CardValue>
-            <CardSubtext>paid this month</CardSubtext>
+            <CardTitle style={{ marginBottom: '0.5rem' }}>Expenses</CardTitle>
+            <CardValue style={{ fontSize: '2rem' }}>{formatter.format(expenseStats.spent)} <span style={{ fontSize: '1.25rem', color: '#52525b' }}>/ {formatter.format(expenseStats.planned)} ₫</span></CardValue>
+            <CardSubtext>spent this month</CardSubtext>
             <ProgressBar>
-              <ProgressFill $color="#3b82f6" $percent={billStats.percent} />
+              <ProgressFill $color={expenseStats.percent > 100 ? '#ef4444' : '#3b82f6'} $percent={expenseStats.percent} />
             </ProgressBar>
           </div>
         </SummaryCard>
