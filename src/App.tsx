@@ -23,6 +23,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard').then(module => ({ defau
 const Habits = lazy(() => import('./pages/Habits').then(module => ({ default: module.Habits })));
 const Meals = lazy(() => import('./pages/Meals').then(module => ({ default: module.Meals })));
 const FixedCosts = lazy(() => import('./pages/FixedCosts').then(module => ({ default: module.FixedCosts })));
+const Tasks = lazy(() => import('./pages/Tasks').then(module => ({ default: module.Tasks })));
 
 const AppShell = styled.div`
   display: flex;
@@ -90,6 +91,17 @@ function App() {
                 <AppShell>
                   <AppHeader />
                   <FixedCosts />
+                </AppShell>
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/tasks"
+            element={
+              <AuthGuard>
+                <AppShell>
+                  <AppHeader />
+                  <Tasks />
                 </AppShell>
               </AuthGuard>
             }

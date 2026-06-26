@@ -2,11 +2,12 @@ import { useMemo } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { HeartPulse, CheckCircle2, UtensilsCrossed, Receipt, ChevronRight, TrendingUp } from 'lucide-react';
+import { HeartPulse, CheckCircle2, UtensilsCrossed, Receipt, ChevronRight, TrendingUp, ListTodo } from 'lucide-react';
 import { moodService } from '../services/moodService';
 import { habitService } from '../services/habitService';
 import { mealService } from '../services/mealService';
 import { expenseService } from '../services/expenseService';
+import { taskService } from '../services/taskService';
 
 /* ── Animations & Layout ── */
 const fadeIn = keyframes`
@@ -226,6 +227,16 @@ export function Overview() {
     queryFn: () => expenseService.getCostRecords(currentMonthKey)
   });
 
+  const todayStr = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }, []);
+
+  const { data: todayTasks = [] } = useQuery({
+    queryKey: ['daily_tasks', todayStr],
+    queryFn: () => taskService.getTasks(todayStr)
+  });
+
   // ── Computations ──
   
   // Mood
@@ -243,12 +254,17 @@ export function Overview() {
   // Habits
   const habitStats = useMemo(() => {
     if (habits.length === 0) return { completed: 0, total: 0 };
-    const todayStr = new Date().toISOString().split('T')[0];
     const completedToday = habits.filter(h => 
       habitLogs.some(l => l.habit_id === h.id && l.log_date === todayStr)
     ).length;
     return { completed: completedToday, total: habits.length };
-  }, [habits, habitLogs]);
+  }, [habits, habitLogs, todayStr]);
+
+  // Tasks
+  const taskStats = useMemo(() => {
+    const done = todayTasks.filter(t => t.is_done).length;
+    return { done, total: todayTasks.length };
+  }, [todayTasks]);
 
   // Meals
   const mealStats = useMemo(() => {
@@ -320,6 +336,25 @@ export function Overview() {
               <ProgressFill 
                 $color="#8b5cf6" 
                 $percent={habitStats.total > 0 ? (habitStats.completed / habitStats.total) * 100 : 0} 
+              />
+            </ProgressBar>
+          </div>
+        </SummaryCard>
+
+        {/* Tasks Card */}
+        <SummaryCard $color="#ec4899" onClick={() => navigate('/tasks')}>
+          <CardHeader>
+            <CardIconWrapper $color="#ec4899"><ListTodo size={24} /></CardIconWrapper>
+            <ChevronRight size={20} color="#52525b" className="arrow-icon" style={{ transition: 'all 0.2s' }} />
+          </CardHeader>
+          <div>
+            <CardTitle style={{ marginBottom: '0.5rem' }}>Daily Tasks</CardTitle>
+            <CardValue>{taskStats.done} <span style={{ fontSize: '1.25rem', color: '#52525b' }}>/ {taskStats.total}</span></CardValue>
+            <CardSubtext>completed today</CardSubtext>
+            <ProgressBar>
+              <ProgressFill 
+                $color="#ec4899" 
+                $percent={taskStats.total > 0 ? (taskStats.done / taskStats.total) * 100 : 0} 
               />
             </ProgressBar>
           </div>
