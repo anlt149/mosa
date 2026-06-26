@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { ChevronLeft, ChevronRight, Plus, Edit2, Trash2, TrendingUp, TrendingDown } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { expenseService, type FixedCost, type CostRecord } from '../services/expenseService';
 
 const fadeIn = keyframes`
@@ -593,7 +594,9 @@ export function FixedCosts() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fixed_costs'] });
       setIsModalOpen(false);
-    }
+      toast.success('Fixed cost saved successfully.');
+    },
+    onError: () => toast.error('Failed to save fixed cost.')
   });
 
   const handleSaveTemplate = () => {
@@ -608,7 +611,9 @@ export function FixedCosts() {
     mutationFn: expenseService.deleteFixedCost,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fixed_costs'] });
-    }
+      toast.success('Fixed cost deleted.');
+    },
+    onError: () => toast.error('Failed to delete fixed cost.')
   });
 
   const handleDeleteTemplate = (id: string) => {

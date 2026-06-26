@@ -5,6 +5,7 @@ import { ActivityHeatmap } from '../components/ActivityHeatmap';
 import { WeeklyTrend } from '../components/WeeklyTrend';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { AlertCircle, History, Send, Calendar, Battery, HeartPulse, BookOpen } from 'lucide-react';
 import { useVimNavigation } from '../hooks/useVimNavigation';
 
@@ -328,36 +329,6 @@ const NoteText = styled.div`
   white-space: pre-wrap;
 `;
 
-/* ── Toast Notifications ── */
-const ToastContainer = styled.div`
-  position: fixed;
-  bottom: 2rem;
-  right: 2rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  z-index: 2000;
-  pointer-events: none;
-`;
-
-const Toast = styled.div<{ $type: 'success' | 'error' }>`
-  background: #18181b;
-  border-left: 4px solid ${props => props.$type === 'success' ? '#10b981' : '#ef4444'};
-  color: #fff;
-  padding: 1rem 1.5rem;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  font-weight: 500;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-
-  @keyframes slideInRight {
-    from { transform: translateX(100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-  }
-`;
-
-/* ── Interfaces ──────────────────────────────────────────────── */
 interface DailyLog {
   id: string;
   user_id: string;
@@ -366,12 +337,6 @@ interface DailyLog {
   energy_level: number;
   note: string | null;
   created_at: string;
-}
-
-interface ToastMessage {
-  id: number;
-  text: string;
-  type: 'success' | 'error';
 }
 
 export function Dashboard() {
@@ -383,7 +348,6 @@ export function Dashboard() {
   const [note, setNote] = useState('');
   const [selectedDate, setSelectedDate] = useState(urlDate || '');
   const [activeSection, setActiveSection] = useState<'mood' | 'energy' | 'note' | 'submit'>('mood');
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   // Sync state with URL parameter if it changes
   useEffect(() => {
@@ -456,14 +420,6 @@ export function Dashboard() {
   const yesterdayStr = `${yesterdayObj.getFullYear()}-${String(yesterdayObj.getMonth() + 1).padStart(2, '0')}-${String(yesterdayObj.getDate()).padStart(2, '0')}`;
   const yesterdayLog = logs.find(l => l.log_date === yesterdayStr);
 
-  const showToast = useCallback((text: string, type: 'success' | 'error') => {
-    const id = Date.now();
-    setToasts(prev => [...prev, { id, text, type }]);
-    setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
-    }, 4000);
-  }, []);
-
   useVimNavigation({
     activeSection,
     setActiveSection,
@@ -505,11 +461,11 @@ export function Dashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['daily_logs'] });
-      showToast(selectedLog ? 'Log updated successfully.' : 'Log submitted successfully.', 'success');
+      toast.success(selectedLog ? 'Log updated successfully.' : 'Log submitted successfully.');
       setActiveSection('mood');
     },
     onError: () => {
-      showToast('Failed to save log.', 'error');
+      toast.error('Failed to save log.');
     }
   });
 
@@ -533,7 +489,7 @@ export function Dashboard() {
       setMood(yesterdayLog.mood_score);
       setEnergy(yesterdayLog.energy_level);
       setNote(yesterdayLog.note || '');
-      showToast('Copied from yesterday', 'success');
+      toast.success('Copied from yesterday');
     }
   };
 
@@ -678,14 +634,6 @@ export function Dashboard() {
           </Card>
         </Column>
       </DashboardGrid>
-
-      <ToastContainer>
-        {toasts.map(toast => (
-          <Toast key={toast.id} $type={toast.type}>
-            {toast.text}
-          </Toast>
-        ))}
-      </ToastContainer>
     </PageContainer>
   );
 }

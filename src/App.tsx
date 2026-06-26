@@ -1,10 +1,11 @@
-import { Suspense } from 'react';
+import { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthGuard } from './components/AuthGuard';
 import { AppHeader } from './components/AppHeader';
 import { FullScreenSpinner } from './components/common';
 import styled from 'styled-components';
+import { Toaster } from 'sonner';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -15,12 +16,11 @@ const queryClient = new QueryClient({
   },
 });
 
-import { Login } from './pages/Login';
-import { Dashboard } from './pages/Dashboard';
-// import { YearInPixels } from './pages/YearInPixels';
-import { Habits } from './pages/Habits';
-import { Meals } from './pages/Meals';
-import { FixedCosts } from './pages/FixedCosts';
+const Login = lazy(() => import('./pages/Login').then(module => ({ default: module.Login })));
+const Dashboard = lazy(() => import('./pages/Dashboard').then(module => ({ default: module.Dashboard })));
+const Habits = lazy(() => import('./pages/Habits').then(module => ({ default: module.Habits })));
+const Meals = lazy(() => import('./pages/Meals').then(module => ({ default: module.Meals })));
+const FixedCosts = lazy(() => import('./pages/FixedCosts').then(module => ({ default: module.FixedCosts })));
 
 const AppShell = styled.div`
   display: flex;
@@ -95,6 +95,7 @@ function App() {
           */}
         </Routes>
       </Suspense>
+      <Toaster theme="dark" richColors position="bottom-right" />
     </BrowserRouter>
     </QueryClientProvider>
   );

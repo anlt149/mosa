@@ -20,7 +20,9 @@ const FullScreenOverlay = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #000;
+  background-color: rgba(9, 9, 11, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;

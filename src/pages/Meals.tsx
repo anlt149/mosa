@@ -5,6 +5,7 @@ import { MealHeatmap } from '../components/MealHeatmap';
 import { MealAnalytics } from '../components/MealAnalytics';
 import { mealService, type Meal } from '../services/mealService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { Home, UtensilsCrossed, TrendingUp, CalendarDays, Settings, Trash2, Edit2, CheckCircle2 } from 'lucide-react';
 
 const fadeIn = keyframes`
@@ -313,6 +314,7 @@ export function Meals() {
     setEditingMeal(null);
     queryClient.invalidateQueries({ queryKey: ['recent_meals'] });
     queryClient.invalidateQueries({ queryKey: ['all_meals'] });
+    toast.success('Meal saved successfully.');
   };
 
   const deleteMutation = useMutation({
@@ -320,7 +322,9 @@ export function Meals() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recent_meals'] });
       queryClient.invalidateQueries({ queryKey: ['all_meals'] });
-    }
+      toast.success('Meal deleted.');
+    },
+    onError: () => toast.error('Failed to delete meal.')
   });
 
   const handleDelete = (id: string) => {
@@ -334,7 +338,9 @@ export function Meals() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user_settings'] });
       setIsEditingBudget(false);
-    }
+      toast.success('Budget updated.');
+    },
+    onError: () => toast.error('Failed to update budget.')
   });
 
   const handleSaveBudget = () => {
