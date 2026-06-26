@@ -1,9 +1,19 @@
 import { Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthGuard } from './components/AuthGuard';
 import { AppHeader } from './components/AppHeader';
 import { FullScreenSpinner } from './components/common';
 import styled from 'styled-components';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // Data is fresh for 5 minutes
+      refetchOnWindowFocus: false, // Don't aggressively refetch unless necessary
+    },
+  },
+});
 
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
@@ -21,8 +31,9 @@ const AppShell = styled.div`
 
 function App() {
   return (
-    <BrowserRouter>
-      <Suspense fallback={<FullScreenSpinner />}>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <Suspense fallback={<FullScreenSpinner />}>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route
@@ -85,6 +96,7 @@ function App() {
         </Routes>
       </Suspense>
     </BrowserRouter>
+    </QueryClientProvider>
   );
 }
 

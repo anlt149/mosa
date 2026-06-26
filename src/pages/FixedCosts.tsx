@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { ChevronLeft, ChevronRight, Plus, Edit2, Trash2, TrendingUp, TrendingDown } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { expenseService, type FixedCost, type CostRecord } from '../services/expenseService';
 
 const fadeIn = keyframes`
@@ -538,10 +539,6 @@ function ExpenseItem({
 
 export function FixedCosts() {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [fixedCosts, setFixedCosts] = useState<FixedCost[]>([]);
-  const [currentRecords, setCurrentRecords] = useState<CostRecord[]>([]);
-  const [prevRecords, setPrevRecords] = useState<CostRecord[]>([]);
-  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<FixedCost | null>(null);
   const [modalName, setModalName] = useState('');
@@ -553,24 +550,22 @@ export function FixedCosts() {
   prevDate.setMonth(prevDate.getMonth() - 1);
   const prevMonthKey = formatMonthKey(prevDate);
 
-  const fetchData = async () => {
-    try {
-      const [costs, currRecs, prevRecs] = await Promise.all([
-        expenseService.getFixedCosts(),
-        expenseService.getCostRecords(currentMonthKey),
-        expenseService.getCostRecords(prevMonthKey)
-      ]);
-      setFixedCosts(costs);
-      setCurrentRecords(currRecs);
-      setPrevRecords(prevRecs);
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    fetchData();
-  }, [currentMonthKey, prevMonthKey]);
+  const { data: fixedCosts = [] } = useQuery({
+    queryKey: ['fixed_costs'],
+    queryFn: expenseService.getFixedCosts
+  });
+
+  const { data: currentRecords = [] } = useQuery({
+    queryKey: ['cost_records', currentMonthKey],
+    queryFn: () => expenseService.getCostRecords(currentMonthKey)
+  });
+
+  const { data: prevRecords = [] } = useQuery({
+    queryKey: ['cost_records', prevMonthKey],
+    queryFn: () => expenseService.getCostRecords(prevMonthKey)
+  });
 
   const handlePrevMonth = () => {
     setCurrentDate(d => {
@@ -588,52 +583,65 @@ export function FixedCosts() {
     });
   };
 
-  const handleSaveTemplate = async () => {
-    try {
-      const amount = modalCost ? parseInt(modalCost.replace(/\D/g, ''), 10) : null;
-      if (editingTemplate) {
-        await expenseService.updateFixedCost(editingTemplate.id, {
-          name: modalName,
-          default_amount: amount
-        });
-      } else {
-        await expenseService.createFixedCost(modalName, amount);
+  const saveTemplateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id?: string; data: any }) => {
+      if (id) {
+        return expenseService.updateFixedCost(id, data);
       }
+      return expenseService.createFixedCost(data.name, data.default_amount);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['fixed_costs'] });
       setIsModalOpen(false);
-      fetchData();
-    } catch (e) {
-      console.error(e);
     }
+  });
+
+  const handleSaveTemplate = () => {
+    const amount = modalCost ? parseInt(modalCost.replace(/\D/g, ''), 10) : null;
+    saveTemplateMutation.mutate({
+      id: editingTemplate?.id,
+      data: { name: modalName, default_amount: amount }
+    });
   };
 
-  const handleDeleteTemplate = async (id: string) => {
+  const deleteTemplateMutation = useMutation({
+    mutationFn: expenseService.deleteFixedCost,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['fixed_costs'] });
+    }
+  });
+
+  const handleDeleteTemplate = (id: string) => {
     if (confirm('Delete this recurring expense permanently?')) {
-      try {
-        await expenseService.deleteFixedCost(id);
-        fetchData();
-      } catch (e) {
-        console.error(e);
-      }
+      deleteTemplateMutation.mutate(id);
     }
   };
 
-  const handleTogglePaid = async (fixedCostId: string, currentPaidState: boolean, actualAmount: number | null) => {
-    try {
-      await expenseService.upsertCostRecord(fixedCostId, currentMonthKey, actualAmount, !currentPaidState);
-      fetchData();
-    } catch (e) {
-      console.error(e);
+  const upsertRecordMutation = useMutation({
+    mutationFn: (data: { fixedCostId: string, monthKey: string, actualAmount: number | null, isPaid: boolean }) => 
+      expenseService.upsertCostRecord(data.fixedCostId, data.monthKey, data.actualAmount, data.isPaid),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['cost_records', variables.monthKey] });
     }
+  });
+
+  const handleTogglePaid = (fixedCostId: string, currentPaidState: boolean, actualAmount: number | null) => {
+    upsertRecordMutation.mutate({
+      fixedCostId,
+      monthKey: currentMonthKey,
+      actualAmount,
+      isPaid: !currentPaidState
+    });
   };
 
-  const handleActualCostChange = async (fixedCostId: string, newCostStr: string, isPaid: boolean) => {
+  const handleActualCostChange = (fixedCostId: string, newCostStr: string, isPaid: boolean) => {
     const amount = newCostStr ? parseInt(newCostStr.replace(/\D/g, ''), 10) : null;
-    try {
-      await expenseService.upsertCostRecord(fixedCostId, currentMonthKey, amount, isPaid);
-      fetchData();
-    } catch (e) {
-      console.error(e);
-    }
+    upsertRecordMutation.mutate({
+      fixedCostId,
+      monthKey: currentMonthKey,
+      actualAmount: amount,
+      isPaid
+    });
   };
 
   // Summaries

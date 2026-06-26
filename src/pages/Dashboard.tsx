@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient';
 import { ActivityHeatmap } from '../components/ActivityHeatmap';
 import { WeeklyTrend } from '../components/WeeklyTrend';
 import { useSearchParams } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AlertCircle, History, Send, Calendar, Battery, HeartPulse, BookOpen } from 'lucide-react';
 import { useVimNavigation } from '../hooks/useVimNavigation';
 
@@ -380,8 +381,6 @@ export function Dashboard() {
   const [mood, setMood] = useState(5);
   const [energy, setEnergy] = useState(5);
   const [note, setNote] = useState('');
-  const [logs, setLogs] = useState<DailyLog[]>([]);
-  const [submitting, setSubmitting] = useState(false);
   const [selectedDate, setSelectedDate] = useState(urlDate || '');
   const [activeSection, setActiveSection] = useState<'mood' | 'energy' | 'note' | 'submit'>('mood');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -398,6 +397,29 @@ export function Dashboard() {
     run();
     return () => { ignore = true; };
   }, [urlDate]);
+
+  const queryClient = useQueryClient();
+
+  const { data: logs = [] } = useQuery({
+    queryKey: ['daily_logs'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      const pastDate = new Date();
+      pastDate.setDate(pastDate.getDate() - 90);
+      const pastDateStr = `${pastDate.getFullYear()}-${String(pastDate.getMonth() + 1).padStart(2, '0')}-${String(pastDate.getDate()).padStart(2, '0')}`;
+
+      const { data, error } = await supabase
+        .from('daily_logs')
+        .select('*')
+        .gte('log_date', pastDateStr)
+        .order('log_date', { ascending: false });
+
+      if (error) throw error;
+      return data as DailyLog[];
+    }
+  });
 
   const todayObj = new Date();
   const todayStr = `${todayObj.getFullYear()}-${String(todayObj.getMonth() + 1).padStart(2, '0')}-${String(todayObj.getDate()).padStart(2, '0')}`;
@@ -453,28 +475,6 @@ export function Dashboard() {
     disabled: false
   });
 
-  const fetchLogs = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const pastDate = new Date();
-    pastDate.setDate(pastDate.getDate() - 90);
-    const pastDateStr = `${pastDate.getFullYear()}-${String(pastDate.getMonth() + 1).padStart(2, '0')}-${String(pastDate.getDate()).padStart(2, '0')}`;
-
-    const { data, error } = await supabase
-      .from('daily_logs')
-      .select('*')
-      .gte('log_date', pastDateStr)
-      .order('log_date', { ascending: false });
-
-    if (error) console.error('Error fetching logs:', error);
-    else if (data) setLogs(data);
-  }, []);
-
-  useEffect(() => {
-    fetchLogs();
-  }, [fetchLogs]);
-
   useEffect(() => {
     const activeDate = selectedDate || todayStr;
     const existing = logs.find(l => l.log_date === activeDate);
@@ -489,38 +489,38 @@ export function Dashboard() {
     }
   }, [selectedDate, logs, todayStr]);
 
-  const handleSubmit = useCallback(async () => {
-    if (submitting) return;
-    setSubmitting(true);
+  const submitMutation = useMutation({
+    mutationFn: async (newLog: { log_date: string, mood_score: number, energy_level: number, note: string }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User session not found.');
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setSubmitting(false);
-      showToast('User session not found.', 'error');
-      return;
-    }
+      const { error } = await supabase
+        .from('daily_logs')
+        .upsert({
+          user_id: user.id,
+          ...newLog
+        }, { onConflict: 'user_id,log_date' });
 
-    const logDate = selectedDate || todayStr;
-
-    const { error } = await supabase
-      .from('daily_logs')
-      .upsert({
-        user_id: user.id,
-        log_date: logDate,
-        mood_score: mood,
-        energy_level: energy,
-        note,
-      }, { onConflict: 'user_id,log_date' });
-
-    if (error) {
-      showToast('Failed to save log.', 'error');
-    } else {
-      await fetchLogs();
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['daily_logs'] });
       showToast(selectedLog ? 'Log updated successfully.' : 'Log submitted successfully.', 'success');
-      setActiveSection('mood'); // Reset focus
+      setActiveSection('mood');
+    },
+    onError: () => {
+      showToast('Failed to save log.', 'error');
     }
-    setSubmitting(false);
-  }, [mood, energy, note, selectedDate, selectedLog, fetchLogs, submitting, todayStr, showToast]);
+  });
+
+  const handleSubmit = useCallback(() => {
+    submitMutation.mutate({
+      log_date: selectedDate || todayStr,
+      mood_score: mood,
+      energy_level: energy,
+      note
+    });
+  }, [mood, energy, note, selectedDate, todayStr, submitMutation]);
 
   const handleDateSelect = (dateStr: string) => {
     setSelectedDate(dateStr);
@@ -629,11 +629,11 @@ export function Dashboard() {
             />
             <SubmitButton 
               onClick={handleSubmit} 
-              disabled={submitting}
+              disabled={submitMutation.isPending}
               onFocus={() => setActiveSection('submit')}
             >
               <Send size={18} />
-              {submitting ? 'Saving...' : (selectedLog ? 'Update Entry' : 'Save Entry')}
+              {submitMutation.isPending ? 'Saving...' : (selectedLog ? 'Update Entry' : 'Save Entry')}
             </SubmitButton>
           </div>
         </div>

@@ -3,7 +3,8 @@ import styled, { keyframes } from 'styled-components';
 import { MealTracker } from '../components/MealTracker';
 import { MealHeatmap } from '../components/MealHeatmap';
 import { MealAnalytics } from '../components/MealAnalytics';
-import { mealService, type Meal, type UserSettings } from '../services/mealService';
+import { mealService, type Meal } from '../services/mealService';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Home, UtensilsCrossed, TrendingUp, CalendarDays, Settings, Trash2, Edit2, CheckCircle2 } from 'lucide-react';
 
 const fadeIn = keyframes`
@@ -280,62 +281,65 @@ const BudgetInputWrapper = styled.div`
 `;
 
 export function Meals() {
-  const [recentMeals, setRecentMeals] = useState<Meal[]>([]);
-  const [allMeals, setAllMeals] = useState<Meal[]>([]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  
   const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
-  const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
   const [isEditingBudget, setIsEditingBudget] = useState(false);
   const [budgetInput, setBudgetInput] = useState('');
 
-  const fetchData = async () => {
-    try {
-      const [recent, all, settings] = await Promise.all([
-        mealService.getRecentMeals(),
-        mealService.getAllMeals(),
-        mealService.getUserSettings()
-      ]);
-      setRecentMeals(recent);
-      setAllMeals(all);
-      setUserSettings(settings);
-      if (settings?.monthly_food_budget_vnd) {
-        setBudgetInput(settings.monthly_food_budget_vnd.toString());
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  const queryClient = useQueryClient();
+
+  const { data: recentMeals = [] } = useQuery({
+    queryKey: ['recent_meals'],
+    queryFn: mealService.getRecentMeals
+  });
+
+  const { data: allMeals = [] } = useQuery({
+    queryKey: ['all_meals'],
+    queryFn: mealService.getAllMeals
+  });
+
+  const { data: userSettings } = useQuery({
+    queryKey: ['user_settings'],
+    queryFn: mealService.getUserSettings
+  });
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (userSettings?.monthly_food_budget_vnd && !isEditingBudget) {
+      setBudgetInput(userSettings.monthly_food_budget_vnd.toString());
+    }
+  }, [userSettings, isEditingBudget]);
 
   const handleMealLogged = () => {
     setEditingMeal(null);
-    fetchData();
+    queryClient.invalidateQueries({ queryKey: ['recent_meals'] });
+    queryClient.invalidateQueries({ queryKey: ['all_meals'] });
   };
 
-  const handleDelete = async (id: string) => {
+  const deleteMutation = useMutation({
+    mutationFn: mealService.deleteMeal,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['recent_meals'] });
+      queryClient.invalidateQueries({ queryKey: ['all_meals'] });
+    }
+  });
+
+  const handleDelete = (id: string) => {
     if (window.confirm('Are you sure you want to delete this meal?')) {
-      try {
-        await mealService.deleteMeal(id);
-        fetchData();
-      } catch (e) {
-        console.error(e);
-      }
+      deleteMutation.mutate(id);
     }
   };
 
-  const handleSaveBudget = async () => {
-    try {
-      const val = budgetInput ? parseInt(budgetInput.replace(/\D/g, ''), 10) : null;
-      const newSettings = await mealService.updateUserSettings(val);
-      setUserSettings(newSettings);
+  const budgetMutation = useMutation({
+    mutationFn: mealService.updateUserSettings,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user_settings'] });
       setIsEditingBudget(false);
-    } catch (e) {
-      console.error(e);
     }
+  });
+
+  const handleSaveBudget = () => {
+    const val = budgetInput ? parseInt(budgetInput.replace(/\D/g, ''), 10) : null;
+    budgetMutation.mutate(val);
   };
 
   const handleBudgetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
