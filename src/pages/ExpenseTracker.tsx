@@ -1,8 +1,19 @@
 import { useState, useMemo } from 'react';
 import styled from 'styled-components';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { expenseService, type Expense, type FixedCost } from '../services/expenseService';
-import { Plus, AlertCircle, X, Trash2 } from 'lucide-react';
+import { expenseService, type Expense, type FixedCost, type ExpenseCategory } from '../services/expenseService';
+import { Plus, AlertCircle, X, Trash2, Edit2 } from 'lucide-react';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis } from 'recharts';
+
+const ChartGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+`;
 import { toast } from 'sonner';
 import {
   Card,
@@ -109,6 +120,8 @@ export function ExpenseTracker() {
   const [expenseForm, setExpenseForm] = useState({ name: '', amount: '', category_id: '', log_date: new Date().toISOString().split('T')[0] });
   const [categoryForm, setCategoryForm] = useState({ name: '', color: '#3b82f6', monthly_budget: '' });
   const [fixedForm, setFixedForm] = useState({ name: '', default_amount: '', category_id: '' });
+  const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>, setter: any, field: string) => {
     const rawValue = e.target.value.replace(/\D/g, '');
@@ -141,6 +154,27 @@ export function ExpenseTracker() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expense_categories'] });
       toast.success('Category created');
+      setCategoryForm({ name: '', color: '#3b82f6', monthly_budget: '' });
+    }
+  });
+
+  const updateExpenseMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string, data: Partial<Omit<Expense, 'id' | 'user_id' | 'created_at'>> }) => expenseService.updateExpense(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      toast.success('Expense updated');
+      setEditingExpenseId(null);
+      setExpenseForm({ name: '', amount: '', category_id: '', log_date: new Date().toISOString().split('T')[0] });
+    }
+  });
+
+  const updateCategoryMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string, data: Partial<Pick<ExpenseCategory, 'name' | 'color' | 'monthly_budget'>> }) => expenseService.updateCategory(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['expense_categories'] });
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      toast.success('Category updated');
+      setEditingCategoryId(null);
       setCategoryForm({ name: '', color: '#3b82f6', monthly_budget: '' });
     }
   });
@@ -198,14 +232,44 @@ export function ExpenseTracker() {
     const amount = parseInt(expenseForm.amount.replace(/\D/g, ''), 10);
     if (!expenseForm.name.trim()) return toast.error('Please enter an expense name');
     if (!amount || amount <= 0) return toast.error('Please enter a valid amount');
-    createExpense.mutate({ ...expenseForm, amount });
+    if (editingExpenseId) {
+      updateExpenseMutation.mutate({ id: editingExpenseId, data: { ...expenseForm, amount } });
+    } else {
+      createExpense.mutate({ ...expenseForm, amount });
+    }
   };
 
   const handleCategorySubmit = () => {
     const budget = parseInt(categoryForm.monthly_budget.replace(/\D/g, ''), 10);
     if (!categoryForm.name.trim()) return toast.error('Please enter a category name');
     if (!budget || budget < 0) return toast.error('Please enter a valid budget');
-    createCategory.mutate({ ...categoryForm, budget });
+    if (editingCategoryId) {
+      updateCategoryMutation.mutate({ id: editingCategoryId, data: { ...categoryForm, monthly_budget: budget } });
+    } else {
+      createCategory.mutate({ ...categoryForm, budget });
+    }
+  };
+
+  const editExpense = (e: Expense) => {
+    setEditingExpenseId(e.id);
+    setExpenseForm({ name: e.name, amount: e.amount.toString(), category_id: e.category_id || '', log_date: e.log_date });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const cancelEditExpense = () => {
+    setEditingExpenseId(null);
+    setExpenseForm({ name: '', amount: '', category_id: '', log_date: new Date().toISOString().split('T')[0] });
+  };
+
+  const editCategory = (c: ExpenseCategory) => {
+    setEditingCategoryId(c.id);
+    setCategoryForm({ name: c.name, color: c.color, monthly_budget: c.monthly_budget.toString() });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const cancelEditCategory = () => {
+    setEditingCategoryId(null);
+    setCategoryForm({ name: '', color: '#3b82f6', monthly_budget: '' });
   };
 
   const handleFixedCostSubmit = () => {
@@ -261,6 +325,30 @@ export function ExpenseTracker() {
     return Object.entries(grouped).sort(([d1], [d2]) => d2.localeCompare(d1));
   }, [expenses]);
 
+  const pieData = useMemo(() => {
+    return categoryStats.filter(c => c.spent > 0).map(c => ({
+      name: c.name,
+      value: c.spent,
+      color: c.color
+    }));
+  }, [categoryStats]);
+
+  const weeklyBarData = useMemo(() => {
+    const today = new Date();
+    const data = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      const dayTotal = expenses.filter(e => e.log_date === dateStr).reduce((sum, e) => sum + e.amount, 0);
+      data.push({
+        name: d.toLocaleDateString('en-US', { weekday: 'short' }),
+        total: dayTotal
+      });
+    }
+    return data;
+  }, [expenses]);
+
   const formatter = new Intl.NumberFormat('en-US');
 
   return (
@@ -296,6 +384,50 @@ export function ExpenseTracker() {
             </MissingDaysAlert>
           )}
 
+          <ChartGrid>
+            <Card style={{ marginBottom: 0 }}>
+              <h2>Expenses by Category</h2>
+              {pieData.length > 0 ? (
+                <div style={{ width: '100%', height: 250, marginTop: '1rem' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} stroke="none">
+                        {pieData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        formatter={(value: any) => `${formatter.format(value)} ₫`}
+                        contentStyle={{ background: '#18181b', border: '1px solid #27272a', borderRadius: '8px', color: '#fff' }}
+                        itemStyle={{ color: '#fff' }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div style={{ color: '#a1a1aa', marginTop: '1rem' }}>No expenses to chart.</div>
+              )}
+            </Card>
+
+            <Card style={{ marginBottom: 0 }}>
+              <h2>Weekly Review</h2>
+              <div style={{ width: '100%', height: 250, marginTop: '1rem' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={weeklyBarData}>
+                    <XAxis dataKey="name" stroke="#a1a1aa" fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#a1a1aa" fontSize={12} tickFormatter={(val) => val > 0 ? `${(val/1000)}k` : '0'} tickLine={false} axisLine={false} width={40} />
+                    <Tooltip 
+                      formatter={(value: any) => `${formatter.format(value)} ₫`}
+                      cursor={{ fill: '#27272a' }}
+                      contentStyle={{ background: '#18181b', border: '1px solid #27272a', borderRadius: '8px', color: '#fff' }}
+                    />
+                    <Bar dataKey="total" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+          </ChartGrid>
+
           <Card>
             <h2>Category Breakdown</h2>
             <div style={{ marginTop: '1.5rem' }}>
@@ -330,10 +462,15 @@ export function ExpenseTracker() {
 
       {activeTab === 'expenses' && (
         <Card>
-          <h2>Log Expense</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <h2 style={{ marginBottom: 0 }}>{editingExpenseId ? 'Edit Expense' : 'Log Expense'}</h2>
+            {editingExpenseId && (
+              <Button $variant="outline" onClick={cancelEditExpense} style={{ padding: '0.5rem 1rem' }}>Cancel Edit</Button>
+            )}
+          </div>
           <FormRow>
             <Input 
-              style={{ flex: 1 }} type="text" placeholder="What did you buy?" 
+              style={{ flex: 1 }} type="text" placeholder="What did you spend?" 
               value={expenseForm.name} onChange={e => setExpenseForm({...expenseForm, name: e.target.value})} 
             />
             <InputWrapper>
@@ -358,7 +495,7 @@ export function ExpenseTracker() {
             />
           </FormRow>
           <Button style={{ width: '100%', padding: '1rem' }} $variant="primary" onClick={handleExpenseSubmit}>
-            <Plus size={18} /> Add Expense
+            {editingExpenseId ? 'Update Expense' : <><Plus size={18} /> Add Expense</>}
           </Button>
 
           <h3 style={{ marginTop: '2rem', marginBottom: '1rem', color: '#fff' }}>Recent Logs</h3>
@@ -374,7 +511,12 @@ export function ExpenseTracker() {
                     <div style={{ color: '#fff', fontWeight: 600 }}>{e.name}</div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                       <div style={{ color: cat ? cat.color : '#fff', fontWeight: 700, fontSize: '1.1rem' }}>{formatter.format(e.amount)} ₫</div>
-                      <ActionBtn onClick={() => deleteExpense.mutate(e.id)}><Trash2 size={16} /></ActionBtn>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <ActionBtn onClick={() => editExpense(e)}><Edit2 size={16} /></ActionBtn>
+                        <ActionBtn onClick={() => {
+                          if (window.confirm('Delete this expense?')) deleteExpense.mutate(e.id);
+                        }}><Trash2 size={16} /></ActionBtn>
+                      </div>
                     </div>
                   </CategoryItem>
                 );
@@ -387,7 +529,12 @@ export function ExpenseTracker() {
 
       {activeTab === 'categories' && (
         <Card>
-          <h2>Manage Categories</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <h2 style={{ marginBottom: 0 }}>{editingCategoryId ? 'Edit Category' : 'Manage Categories'}</h2>
+            {editingCategoryId && (
+              <Button $variant="outline" onClick={cancelEditCategory} style={{ padding: '0.5rem 1rem' }}>Cancel Edit</Button>
+            )}
+          </div>
           <FormRow>
             <Input 
               style={{ flex: 2 }} type="text" placeholder="Category Name" 
@@ -405,7 +552,7 @@ export function ExpenseTracker() {
               value={categoryForm.color} onChange={e => setCategoryForm({...categoryForm, color: e.target.value})} 
             />
             <Button $variant="primary" style={{ flex: 'none' }} onClick={handleCategorySubmit}>
-              Add
+              {editingCategoryId ? 'Update' : 'Add'}
             </Button>
           </FormRow>
 
@@ -419,11 +566,14 @@ export function ExpenseTracker() {
                     <div style={{ color: '#a1a1aa', fontSize: '0.85rem' }}>Budget: {formatter.format(c.monthly_budget)} ₫</div>
                   </div>
                 </div>
-                <ActionBtn onClick={() => {
-                  if (window.confirm('Delete this category? Related expenses will become uncategorized.')) {
-                    deleteCategoryMutation.mutate(c.id);
-                  }
-                }}><Trash2 size={16} /></ActionBtn>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <ActionBtn onClick={() => editCategory(c)}><Edit2 size={16} /></ActionBtn>
+                  <ActionBtn onClick={() => {
+                    if (window.confirm('Delete this category? Related expenses will become uncategorized.')) {
+                      deleteCategoryMutation.mutate(c.id);
+                    }
+                  }}><Trash2 size={16} /></ActionBtn>
+                </div>
               </CategoryItem>
             ))}
           </div>
