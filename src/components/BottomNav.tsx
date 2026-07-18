@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
-import { LayoutDashboard, HeartPulse, CheckCircle2, UtensilsCrossed, Receipt, ListTodo } from 'lucide-react';
+import { LayoutDashboard, HeartPulse, CheckCircle2, Receipt } from 'lucide-react';
 
 const NavContainer = styled.nav`
   position: fixed;
@@ -90,30 +90,12 @@ export function BottomNav() {
       </NavItem>
 
       <NavItem 
-        $active={path === '/meals'} 
-        onClick={() => navigate('/meals')}
-        aria-label="Meals"
-      >
-        <UtensilsCrossed size={22} strokeWidth={path === '/meals' ? 2.5 : 2} />
-        <Label $active={path === '/meals'}>Meals</Label>
-      </NavItem>
-
-      <NavItem 
         $active={path === '/expenses'} 
         onClick={() => navigate('/expenses')}
         aria-label="Expenses"
       >
         <Receipt size={22} strokeWidth={path === '/expenses' ? 2.5 : 2} />
         <Label $active={path === '/expenses'}>Expenses</Label>
-      </NavItem>
-
-      <NavItem 
-        $active={path === '/tasks'} 
-        onClick={() => navigate('/tasks')}
-        aria-label="Tasks"
-      >
-        <ListTodo size={22} strokeWidth={path === '/tasks' ? 2.5 : 2} />
-        <Label $active={path === '/tasks'}>Tasks</Label>
       </NavItem>
     </NavContainer>
   );

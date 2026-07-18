@@ -2,12 +2,10 @@ import { useMemo } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { HeartPulse, CheckCircle2, UtensilsCrossed, Receipt, ChevronRight, TrendingUp, ListTodo } from 'lucide-react';
+import { HeartPulse, CheckCircle2, Receipt, ChevronRight, TrendingUp } from 'lucide-react';
 import { moodService } from '../services/moodService';
 import { habitService } from '../services/habitService';
-import { mealService } from '../services/mealService';
 import { expenseService } from '../services/expenseService';
-import { taskService } from '../services/taskService';
 
 /* ── Animations & Layout ── */
 const fadeIn = keyframes`
@@ -212,15 +210,7 @@ export function Overview() {
     queryFn: () => habitService.getHabitLogs(30)
   });
 
-  const { data: allMeals = [] } = useQuery({
-    queryKey: ['all_meals'],
-    queryFn: mealService.getAllMeals
-  });
 
-  const { data: userSettings } = useQuery({
-    queryKey: ['user_settings'],
-    queryFn: mealService.getUserSettings
-  });
 
   const monthRange = getMonthRange();
   const { data: expenses = [] } = useQuery({
@@ -238,10 +228,7 @@ export function Overview() {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }, []);
 
-  const { data: todayTasks = [] } = useQuery({
-    queryKey: ['daily_tasks', todayStr],
-    queryFn: () => taskService.getTasks(todayStr)
-  });
+
 
   // ── Computations ──
   
@@ -266,30 +253,7 @@ export function Overview() {
     return { completed: completedToday, total: habits.length };
   }, [habits, habitLogs, todayStr]);
 
-  // Tasks
-  const taskStats = useMemo(() => {
-    const done = todayTasks.filter(t => t.is_done).length;
-    return { done, total: todayTasks.length };
-  }, [todayTasks]);
 
-  // Meals
-  const mealStats = useMemo(() => {
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    let monthSpent = 0;
-    
-    allMeals.forEach(meal => {
-      if (meal.cost_vnd) {
-        const mealDate = new Date(meal.created_at);
-        if (mealDate >= startOfMonth) monthSpent += meal.cost_vnd;
-      }
-    });
-
-    const budget = userSettings?.monthly_food_budget_vnd || 0;
-    const percent = budget > 0 ? (monthSpent / budget) * 100 : 0;
-    
-    return { spent: monthSpent, budget, percent };
-  }, [allMeals, userSettings]);
 
   // Expenses
   const expenseStats = useMemo(() => {
@@ -342,43 +306,7 @@ export function Overview() {
           </div>
         </SummaryCard>
 
-        {/* Tasks Card */}
-        <SummaryCard $color="#ec4899" onClick={() => navigate('/tasks')}>
-          <CardHeader>
-            <CardIconWrapper $color="#ec4899"><ListTodo size={24} /></CardIconWrapper>
-            <ChevronRight size={20} color="#52525b" className="arrow-icon" style={{ transition: 'all 0.2s' }} />
-          </CardHeader>
-          <div>
-            <CardTitle style={{ marginBottom: '0.5rem' }}>Daily Tasks</CardTitle>
-            <CardValue>{taskStats.done} <span style={{ fontSize: '1.25rem', color: '#52525b' }}>/ {taskStats.total}</span></CardValue>
-            <CardSubtext>completed today</CardSubtext>
-            <ProgressBar>
-              <ProgressFill 
-                $color="#ec4899" 
-                $percent={taskStats.total > 0 ? (taskStats.done / taskStats.total) * 100 : 0} 
-              />
-            </ProgressBar>
-          </div>
-        </SummaryCard>
 
-        {/* Meals Card */}
-        <SummaryCard $color="#f97316" onClick={() => navigate('/meals')}>
-          <CardHeader>
-            <CardIconWrapper $color="#f97316"><UtensilsCrossed size={24} /></CardIconWrapper>
-            <ChevronRight size={20} color="#52525b" className="arrow-icon" style={{ transition: 'all 0.2s' }} />
-          </CardHeader>
-          <div>
-            <CardTitle style={{ marginBottom: '0.5rem' }}>Food Budget</CardTitle>
-            <CardValue style={{ fontSize: '2rem' }}>{formatter.format(mealStats.spent)} <span style={{ fontSize: '1.25rem', color: '#52525b' }}>₫</span></CardValue>
-            <CardSubtext>spent this month</CardSubtext>
-            <ProgressBar>
-              <ProgressFill 
-                $color={mealStats.percent > 90 ? '#ef4444' : '#f97316'} 
-                $percent={mealStats.percent} 
-              />
-            </ProgressBar>
-          </div>
-        </SummaryCard>
 
         {/* Expenses Card */}
         <SummaryCard $color="#3b82f6" onClick={() => navigate('/expenses')}>

@@ -21,9 +21,7 @@ const Overview = lazy(() => import('./pages/Overview').then(module => ({ default
 const Login = lazy(() => import('./pages/Login').then(module => ({ default: module.Login })));
 const Dashboard = lazy(() => import('./pages/Dashboard').then(module => ({ default: module.Dashboard })));
 const Habits = lazy(() => import('./pages/Habits').then(module => ({ default: module.Habits })));
-const Meals = lazy(() => import('./pages/Meals').then(module => ({ default: module.Meals })));
 const ExpenseTracker = lazy(() => import('./pages/ExpenseTracker').then(module => ({ default: module.ExpenseTracker })));
-const Tasks = lazy(() => import('./pages/Tasks').then(module => ({ default: module.Tasks })));
 
 const AppShell = styled.div`
   display: flex;
@@ -74,34 +72,12 @@ function App() {
             }
           />
           <Route
-            path="/meals"
-            element={
-              <AuthGuard>
-                <AppShell>
-                  <AppHeader />
-                  <Meals />
-                </AppShell>
-              </AuthGuard>
-            }
-          />
-          <Route
             path="/expenses"
             element={
               <AuthGuard>
                 <AppShell>
                   <AppHeader />
                   <ExpenseTracker />
-                </AppShell>
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/tasks"
-            element={
-              <AuthGuard>
-                <AppShell>
-                  <AppHeader />
-                  <Tasks />
                 </AppShell>
               </AuthGuard>
             }
